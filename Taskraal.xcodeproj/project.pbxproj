@@ -9,7 +9,6 @@
 /* Begin PBXBuildFile section */
 		DBB1FF2C2D75F57700FBA4A7 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBB1FF2B2D75F57700FBA4A7 /* AppDelegate.swift */; };
 		DBB1FF2E2D75F57700FBA4A7 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBB1FF2D2D75F57700FBA4A7 /* SceneDelegate.swift */; };
-		DBB1FF302D75F57700FBA4A7 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBB1FF2F2D75F57700FBA4A7 /* ViewController.swift */; };
 		DBB1FF332D75F57700FBA4A7 /* Base in Resources */ = {isa = PBXBuildFile; fileRef = DBB1FF322D75F57700FBA4A7 /* Base */; };
 		DBB1FF362D75F57700FBA4A7 /* Taskraal.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = DBB1FF342D75F57700FBA4A7 /* Taskraal.xcdatamodeld */; };
 		DBB1FF382D75F57900FBA4A7 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DBB1FF372D75F57900FBA4A7 /* Assets.xcassets */; };
@@ -17,6 +16,10 @@
 		DBB1FF462D75F57900FBA4A7 /* TaskraalTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBB1FF452D75F57900FBA4A7 /* TaskraalTests.swift */; };
 		DBB1FF502D75F57900FBA4A7 /* TaskraalUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBB1FF4F2D75F57900FBA4A7 /* TaskraalUITests.swift */; };
 		DBB1FF522D75F57900FBA4A7 /* TaskraalUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBB1FF512D75F57900FBA4A7 /* TaskraalUITestsLaunchTests.swift */; };
+		DBB1FF642D76079600FBA4A7 /* OnboardingViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBB1FF632D76079600FBA4A7 /* OnboardingViewController.swift */; };
+		DBB1FF672D7766F800FBA4A7 /* UIView+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBB1FF662D7766F700FBA4A7 /* UIView+Extensions.swift */; };
+		DBB1FF692D7769A200FBA4A7 /* OnboardingSlide.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBB1FF682D7769A200FBA4A7 /* OnboardingSlide.swift */; };
+		DBB1FF6B2D776EC700FBA4A7 /* OnboardingCollectionViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBB1FF6A2D776EC700FBA4A7 /* OnboardingCollectionViewCell.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -40,7 +43,6 @@
 		DBB1FF282D75F57700FBA4A7 /* Taskraal.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Taskraal.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		DBB1FF2B2D75F57700FBA4A7 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		DBB1FF2D2D75F57700FBA4A7 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
-		DBB1FF2F2D75F57700FBA4A7 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
 		DBB1FF322D75F57700FBA4A7 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		DBB1FF352D75F57700FBA4A7 /* Taskraal.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = Taskraal.xcdatamodel; sourceTree = "<group>"; };
 		DBB1FF372D75F57900FBA4A7 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -51,6 +53,10 @@
 		DBB1FF4B2D75F57900FBA4A7 /* TaskraalUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TaskraalUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		DBB1FF4F2D75F57900FBA4A7 /* TaskraalUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskraalUITests.swift; sourceTree = "<group>"; };
 		DBB1FF512D75F57900FBA4A7 /* TaskraalUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskraalUITestsLaunchTests.swift; sourceTree = "<group>"; };
+		DBB1FF632D76079600FBA4A7 /* OnboardingViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingViewController.swift; sourceTree = "<group>"; };
+		DBB1FF662D7766F700FBA4A7 /* UIView+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIView+Extensions.swift"; sourceTree = "<group>"; };
+		DBB1FF682D7769A200FBA4A7 /* OnboardingSlide.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingSlide.swift; sourceTree = "<group>"; };
+		DBB1FF6A2D776EC700FBA4A7 /* OnboardingCollectionViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingCollectionViewCell.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -101,9 +107,12 @@
 		DBB1FF2A2D75F57700FBA4A7 /* Taskraal */ = {
 			isa = PBXGroup;
 			children = (
+				DBB1FF652D760B9500FBA4A7 /* Extensions */,
+				DBB1FF612D76065D00FBA4A7 /* CustomViews */,
+				DBB1FF5F2D76064000FBA4A7 /* Views */,
+				DBB1FF5E2D76063100FBA4A7 /* Models */,
 				DBB1FF2B2D75F57700FBA4A7 /* AppDelegate.swift */,
 				DBB1FF2D2D75F57700FBA4A7 /* SceneDelegate.swift */,
-				DBB1FF2F2D75F57700FBA4A7 /* ViewController.swift */,
 				DBB1FF312D75F57700FBA4A7 /* Main.storyboard */,
 				DBB1FF372D75F57900FBA4A7 /* Assets.xcassets */,
 				DBB1FF392D75F57900FBA4A7 /* LaunchScreen.storyboard */,
@@ -128,6 +137,46 @@
 				DBB1FF512D75F57900FBA4A7 /* TaskraalUITestsLaunchTests.swift */,
 			);
 			path = TaskraalUITests;
+			sourceTree = "<group>";
+		};
+		DBB1FF5E2D76063100FBA4A7 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				DBB1FF682D7769A200FBA4A7 /* OnboardingSlide.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		DBB1FF5F2D76064000FBA4A7 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				DBB1FF622D76067700FBA4A7 /* Onboarding */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		DBB1FF612D76065D00FBA4A7 /* CustomViews */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = CustomViews;
+			sourceTree = "<group>";
+		};
+		DBB1FF622D76067700FBA4A7 /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				DBB1FF632D76079600FBA4A7 /* OnboardingViewController.swift */,
+				DBB1FF6A2D776EC700FBA4A7 /* OnboardingCollectionViewCell.swift */,
+			);
+			path = Onboarding;
+			sourceTree = "<group>";
+		};
+		DBB1FF652D760B9500FBA4A7 /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+				DBB1FF662D7766F700FBA4A7 /* UIView+Extensions.swift */,
+			);
+			path = Extensions;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -262,8 +311,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				DBB1FF362D75F57700FBA4A7 /* Taskraal.xcdatamodeld in Sources */,
-				DBB1FF302D75F57700FBA4A7 /* ViewController.swift in Sources */,
+				DBB1FF642D76079600FBA4A7 /* OnboardingViewController.swift in Sources */,
+				DBB1FF672D7766F800FBA4A7 /* UIView+Extensions.swift in Sources */,
 				DBB1FF2C2D75F57700FBA4A7 /* AppDelegate.swift in Sources */,
+				DBB1FF692D7769A200FBA4A7 /* OnboardingSlide.swift in Sources */,
+				DBB1FF6B2D776EC700FBA4A7 /* OnboardingCollectionViewCell.swift in Sources */,
 				DBB1FF2E2D75F57700FBA4A7 /* SceneDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
