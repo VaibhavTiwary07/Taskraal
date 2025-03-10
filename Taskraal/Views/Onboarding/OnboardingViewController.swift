@@ -22,6 +22,16 @@ class OnboardingViewController: UIViewController {
         }
     }
     
+    private let skipButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setTitle("Skip", for: .normal)
+        
+        button.addTarget(OnboardingViewController.self, action: #selector(goToLastSlide), for: .touchUpInside)
+        
+        
+        return button
+        
+    }()
     // MARK: - UI Components
     private let collectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
@@ -60,6 +70,7 @@ class OnboardingViewController: UIViewController {
         setupSlides()
         setupUI()
         setupCollectionView()
+        
     }
     
     override func viewDidLayoutSubviews() {
@@ -82,10 +93,16 @@ class OnboardingViewController: UIViewController {
         ]
     }
     
+    @objc private func goToLastSlide(){
+        currentPage = slides.count - 1;
+        let indexPath = IndexPath(item: currentPage, section: 0)
+        collectionView.scrollToItem(at: indexPath, at: .centeredHorizontally, animated: true)
+    }
+    
     private func setupUI() {
         view.backgroundColor = .white
         
-        view.addSubviews(collectionView, pageControl, nextButton)
+        view.addSubviews(collectionView, pageControl, nextButton,skipButton)
         
         collectionView.anchor(top: view.safeAreaLayoutGuide.topAnchor,
                               leading: view.leadingAnchor,
@@ -98,11 +115,20 @@ class OnboardingViewController: UIViewController {
                            paddingTop: 20)
         pageControl.numberOfPages = slides.count
         
-        nextButton.anchor(bottom: view.safeAreaLayoutGuide.bottomAnchor,
-                          paddingBottom: 30,
+        nextButton.anchor(top: pageControl.bottomAnchor,
+                          paddingTop: 30,
                           width: 200,
                           height: 50)
         nextButton.centerX(in: view)
+        
+        skipButton.anchor(bottom: view.safeAreaLayoutGuide.bottomAnchor,
+                          paddingBottom: 10,
+                          width: 200,
+                          height: 50)
+        skipButton.centerX(in: view)
+        
+        
+       
         nextButton.addTarget(self, action: #selector(nextButtonTapped), for: .touchUpInside)
     }
     
