@@ -25,6 +25,7 @@ class OnboardingViewController: UIViewController {
     private let skipButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("Skip", for: .normal)
+//        button.backgroundColor = UIColor(cgColor: <#T##CGColor#>)
         
         button.addTarget(OnboardingViewController.self, action: #selector(goToLastSlide), for: .touchUpInside)
         
@@ -141,8 +142,8 @@ class OnboardingViewController: UIViewController {
     // MARK: - Actions
     @objc private func nextButtonTapped() {
         if currentPage == slides.count - 1 {
-            // Last slide, transition to app's main flow
-            let mainViewController = UIViewController() // Replace with your main view controller
+            UserDefaults.standard.setValue(true, forKey: "OnboardingDone")
+            let mainViewController = MainTabBarController() // Replace with your main view controller
             mainViewController.view.backgroundColor = .white
             
             if let sceneDelegate = UIApplication.shared.connectedScenes

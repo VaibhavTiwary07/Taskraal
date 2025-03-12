@@ -22,6 +22,10 @@
 		DBB1FF6B2D776EC700FBA4A7 /* OnboardingCollectionViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBB1FF6A2D776EC700FBA4A7 /* OnboardingCollectionViewCell.swift */; };
 		DBB1FFB82D7F52BE00FBA4A7 /* PriorityLevel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBB1FFB72D7F52BE00FBA4A7 /* PriorityLevel.swift */; };
 		DBB1FFBB2D7F54E300FBA4A7 /* CoreDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBB1FFBA2D7F54E300FBA4A7 /* CoreDataManager.swift */; };
+		DBBF60642D817E1E00465BFF /* MainTabBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBBF60632D817E1E00465BFF /* MainTabBarController.swift */; };
+		DBBF60662D81857900465BFF /* TaskViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBBF60652D81857900465BFF /* TaskViewController.swift */; };
+		DBBF60682D81859D00465BFF /* CategoriesViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBBF60672D81859D00465BFF /* CategoriesViewController.swift */; };
+		DBBF606A2D8185AF00465BFF /* SettingsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBBF60692D8185AF00465BFF /* SettingsViewController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -61,6 +65,10 @@
 		DBB1FF6A2D776EC700FBA4A7 /* OnboardingCollectionViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingCollectionViewCell.swift; sourceTree = "<group>"; };
 		DBB1FFB72D7F52BE00FBA4A7 /* PriorityLevel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PriorityLevel.swift; sourceTree = "<group>"; };
 		DBB1FFBA2D7F54E300FBA4A7 /* CoreDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataManager.swift; sourceTree = "<group>"; };
+		DBBF60632D817E1E00465BFF /* MainTabBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabBarController.swift; sourceTree = "<group>"; };
+		DBBF60652D81857900465BFF /* TaskViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskViewController.swift; sourceTree = "<group>"; };
+		DBBF60672D81859D00465BFF /* CategoriesViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoriesViewController.swift; sourceTree = "<group>"; };
+		DBBF60692D8185AF00465BFF /* SettingsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -116,6 +124,7 @@
 				DBB1FF5F2D76064000FBA4A7 /* Views */,
 				DBB1FF5E2D76063100FBA4A7 /* Models */,
 				DBB1FFB92D7F548F00FBA4A7 /* Services */,
+				DBBF60622D817D9300465BFF /* Controllers */,
 				DBB1FF2B2D75F57700FBA4A7 /* AppDelegate.swift */,
 				DBB1FF2D2D75F57700FBA4A7 /* SceneDelegate.swift */,
 				DBB1FF312D75F57700FBA4A7 /* Main.storyboard */,
@@ -156,6 +165,7 @@
 		DBB1FF5F2D76064000FBA4A7 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				DBBF60612D817D5200465BFF /* Cells */,
 				DBB1FF622D76067700FBA4A7 /* Onboarding */,
 			);
 			path = Views;
@@ -172,7 +182,6 @@
 			isa = PBXGroup;
 			children = (
 				DBB1FF632D76079600FBA4A7 /* OnboardingViewController.swift */,
-				DBB1FF6A2D776EC700FBA4A7 /* OnboardingCollectionViewCell.swift */,
 			);
 			path = Onboarding;
 			sourceTree = "<group>";
@@ -191,6 +200,25 @@
 				DBB1FFBA2D7F54E300FBA4A7 /* CoreDataManager.swift */,
 			);
 			path = Services;
+			sourceTree = "<group>";
+		};
+		DBBF60612D817D5200465BFF /* Cells */ = {
+			isa = PBXGroup;
+			children = (
+				DBB1FF6A2D776EC700FBA4A7 /* OnboardingCollectionViewCell.swift */,
+			);
+			path = Cells;
+			sourceTree = "<group>";
+		};
+		DBBF60622D817D9300465BFF /* Controllers */ = {
+			isa = PBXGroup;
+			children = (
+				DBBF60632D817E1E00465BFF /* MainTabBarController.swift */,
+				DBBF60672D81859D00465BFF /* CategoriesViewController.swift */,
+				DBBF60692D8185AF00465BFF /* SettingsViewController.swift */,
+				DBBF60652D81857900465BFF /* TaskViewController.swift */,
+			);
+			path = Controllers;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -326,11 +354,15 @@
 			files = (
 				DBB1FFB82D7F52BE00FBA4A7 /* PriorityLevel.swift in Sources */,
 				DBB1FF362D75F57700FBA4A7 /* Taskraal.xcdatamodeld in Sources */,
+				DBBF60682D81859D00465BFF /* CategoriesViewController.swift in Sources */,
+				DBBF60662D81857900465BFF /* TaskViewController.swift in Sources */,
+				DBBF60642D817E1E00465BFF /* MainTabBarController.swift in Sources */,
 				DBB1FF642D76079600FBA4A7 /* OnboardingViewController.swift in Sources */,
 				DBB1FFBB2D7F54E300FBA4A7 /* CoreDataManager.swift in Sources */,
 				DBB1FF672D7766F800FBA4A7 /* UIView+Extensions.swift in Sources */,
 				DBB1FF2C2D75F57700FBA4A7 /* AppDelegate.swift in Sources */,
 				DBB1FF692D7769A200FBA4A7 /* OnboardingSlide.swift in Sources */,
+				DBBF606A2D8185AF00465BFF /* SettingsViewController.swift in Sources */,
 				DBB1FF6B2D776EC700FBA4A7 /* OnboardingCollectionViewCell.swift in Sources */,
 				DBB1FF2E2D75F57700FBA4A7 /* SceneDelegate.swift in Sources */,
 			);
