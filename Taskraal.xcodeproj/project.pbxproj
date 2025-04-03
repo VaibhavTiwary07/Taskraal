@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		DB6FA5682D9E862800633F8F /* TaskCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB6FA5672D9E862800633F8F /* TaskCell.swift */; };
 		DBB1FF2C2D75F57700FBA4A7 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBB1FF2B2D75F57700FBA4A7 /* AppDelegate.swift */; };
 		DBB1FF2E2D75F57700FBA4A7 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBB1FF2D2D75F57700FBA4A7 /* SceneDelegate.swift */; };
 		DBB1FF332D75F57700FBA4A7 /* Base in Resources */ = {isa = PBXBuildFile; fileRef = DBB1FF322D75F57700FBA4A7 /* Base */; };
@@ -46,6 +47,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		DB6FA5672D9E862800633F8F /* TaskCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskCell.swift; sourceTree = "<group>"; };
 		DBB1FF282D75F57700FBA4A7 /* Taskraal.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Taskraal.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		DBB1FF2B2D75F57700FBA4A7 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		DBB1FF2D2D75F57700FBA4A7 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
@@ -206,6 +208,7 @@
 			isa = PBXGroup;
 			children = (
 				DBB1FF6A2D776EC700FBA4A7 /* OnboardingCollectionViewCell.swift */,
+				DB6FA5672D9E862800633F8F /* TaskCell.swift */,
 			);
 			path = Cells;
 			sourceTree = "<group>";
@@ -360,6 +363,7 @@
 				DBB1FF642D76079600FBA4A7 /* OnboardingViewController.swift in Sources */,
 				DBB1FFBB2D7F54E300FBA4A7 /* CoreDataManager.swift in Sources */,
 				DBB1FF672D7766F800FBA4A7 /* UIView+Extensions.swift in Sources */,
+				DB6FA5682D9E862800633F8F /* TaskCell.swift in Sources */,
 				DBB1FF2C2D75F57700FBA4A7 /* AppDelegate.swift in Sources */,
 				DBB1FF692D7769A200FBA4A7 /* OnboardingSlide.swift in Sources */,
 				DBBF606A2D8185AF00465BFF /* SettingsViewController.swift in Sources */,
