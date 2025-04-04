@@ -8,10 +8,14 @@
 
 /* Begin PBXBuildFile section */
 		DB6FA5682D9E862800633F8F /* TaskCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB6FA5672D9E862800633F8F /* TaskCell.swift */; };
+		DB6FA56A2D9E870200633F8F /* AddTaskViewcontoller.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB6FA5692D9E870200633F8F /* AddTaskViewcontoller.swift */; };
+		DB6FA56C2D9E886000633F8F /* CategoryDetailViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB6FA56B2D9E886000633F8F /* CategoryDetailViewController.swift */; };
+		DB6FA56E2D9E8E8300633F8F /* DatePickerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB6FA56D2D9E8E8300633F8F /* DatePickerViewController.swift */; };
+		DB6FA5712D9FA1FC00633F8F /* Taskraal.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = DB6FA56F2D9FA1FC00633F8F /* Taskraal.xcdatamodeld */; };
+		DB6FA57B2D9FA74400633F8F /* CoreDataManger.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB6FA57A2D9FA74400633F8F /* CoreDataManger.swift */; };
 		DBB1FF2C2D75F57700FBA4A7 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBB1FF2B2D75F57700FBA4A7 /* AppDelegate.swift */; };
 		DBB1FF2E2D75F57700FBA4A7 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBB1FF2D2D75F57700FBA4A7 /* SceneDelegate.swift */; };
 		DBB1FF332D75F57700FBA4A7 /* Base in Resources */ = {isa = PBXBuildFile; fileRef = DBB1FF322D75F57700FBA4A7 /* Base */; };
-		DBB1FF362D75F57700FBA4A7 /* Taskraal.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = DBB1FF342D75F57700FBA4A7 /* Taskraal.xcdatamodeld */; };
 		DBB1FF382D75F57900FBA4A7 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DBB1FF372D75F57900FBA4A7 /* Assets.xcassets */; };
 		DBB1FF3B2D75F57900FBA4A7 /* Base in Resources */ = {isa = PBXBuildFile; fileRef = DBB1FF3A2D75F57900FBA4A7 /* Base */; };
 		DBB1FF462D75F57900FBA4A7 /* TaskraalTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBB1FF452D75F57900FBA4A7 /* TaskraalTests.swift */; };
@@ -22,7 +26,6 @@
 		DBB1FF692D7769A200FBA4A7 /* OnboardingSlide.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBB1FF682D7769A200FBA4A7 /* OnboardingSlide.swift */; };
 		DBB1FF6B2D776EC700FBA4A7 /* OnboardingCollectionViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBB1FF6A2D776EC700FBA4A7 /* OnboardingCollectionViewCell.swift */; };
 		DBB1FFB82D7F52BE00FBA4A7 /* PriorityLevel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBB1FFB72D7F52BE00FBA4A7 /* PriorityLevel.swift */; };
-		DBB1FFBB2D7F54E300FBA4A7 /* CoreDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBB1FFBA2D7F54E300FBA4A7 /* CoreDataManager.swift */; };
 		DBBF60642D817E1E00465BFF /* MainTabBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBBF60632D817E1E00465BFF /* MainTabBarController.swift */; };
 		DBBF60662D81857900465BFF /* TaskViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBBF60652D81857900465BFF /* TaskViewController.swift */; };
 		DBBF60682D81859D00465BFF /* CategoriesViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBBF60672D81859D00465BFF /* CategoriesViewController.swift */; };
@@ -48,11 +51,15 @@
 
 /* Begin PBXFileReference section */
 		DB6FA5672D9E862800633F8F /* TaskCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskCell.swift; sourceTree = "<group>"; };
+		DB6FA5692D9E870200633F8F /* AddTaskViewcontoller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddTaskViewcontoller.swift; sourceTree = "<group>"; };
+		DB6FA56B2D9E886000633F8F /* CategoryDetailViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryDetailViewController.swift; sourceTree = "<group>"; };
+		DB6FA56D2D9E8E8300633F8F /* DatePickerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatePickerViewController.swift; sourceTree = "<group>"; };
+		DB6FA5702D9FA1FC00633F8F /* Taskraal.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = Taskraal.xcdatamodel; sourceTree = "<group>"; };
+		DB6FA57A2D9FA74400633F8F /* CoreDataManger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataManger.swift; sourceTree = "<group>"; };
 		DBB1FF282D75F57700FBA4A7 /* Taskraal.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Taskraal.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		DBB1FF2B2D75F57700FBA4A7 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		DBB1FF2D2D75F57700FBA4A7 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		DBB1FF322D75F57700FBA4A7 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
-		DBB1FF352D75F57700FBA4A7 /* Taskraal.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = Taskraal.xcdatamodel; sourceTree = "<group>"; };
 		DBB1FF372D75F57900FBA4A7 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		DBB1FF3A2D75F57900FBA4A7 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		DBB1FF3C2D75F57900FBA4A7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -66,7 +73,6 @@
 		DBB1FF682D7769A200FBA4A7 /* OnboardingSlide.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingSlide.swift; sourceTree = "<group>"; };
 		DBB1FF6A2D776EC700FBA4A7 /* OnboardingCollectionViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingCollectionViewCell.swift; sourceTree = "<group>"; };
 		DBB1FFB72D7F52BE00FBA4A7 /* PriorityLevel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PriorityLevel.swift; sourceTree = "<group>"; };
-		DBB1FFBA2D7F54E300FBA4A7 /* CoreDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataManager.swift; sourceTree = "<group>"; };
 		DBBF60632D817E1E00465BFF /* MainTabBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabBarController.swift; sourceTree = "<group>"; };
 		DBBF60652D81857900465BFF /* TaskViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskViewController.swift; sourceTree = "<group>"; };
 		DBBF60672D81859D00465BFF /* CategoriesViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoriesViewController.swift; sourceTree = "<group>"; };
@@ -101,6 +107,7 @@
 		DBB1FF1F2D75F57600FBA4A7 = {
 			isa = PBXGroup;
 			children = (
+				DB6FA56F2D9FA1FC00633F8F /* Taskraal.xcdatamodeld */,
 				DBB1FF2A2D75F57700FBA4A7 /* Taskraal */,
 				DBB1FF442D75F57900FBA4A7 /* TaskraalTests */,
 				DBB1FF4E2D75F57900FBA4A7 /* TaskraalUITests */,
@@ -133,7 +140,6 @@
 				DBB1FF372D75F57900FBA4A7 /* Assets.xcassets */,
 				DBB1FF392D75F57900FBA4A7 /* LaunchScreen.storyboard */,
 				DBB1FF3C2D75F57900FBA4A7 /* Info.plist */,
-				DBB1FF342D75F57700FBA4A7 /* Taskraal.xcdatamodeld */,
 			);
 			path = Taskraal;
 			sourceTree = "<group>";
@@ -199,7 +205,7 @@
 		DBB1FFB92D7F548F00FBA4A7 /* Services */ = {
 			isa = PBXGroup;
 			children = (
-				DBB1FFBA2D7F54E300FBA4A7 /* CoreDataManager.swift */,
+				DB6FA57A2D9FA74400633F8F /* CoreDataManger.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -218,8 +224,11 @@
 			children = (
 				DBBF60632D817E1E00465BFF /* MainTabBarController.swift */,
 				DBBF60672D81859D00465BFF /* CategoriesViewController.swift */,
+				DB6FA56B2D9E886000633F8F /* CategoryDetailViewController.swift */,
 				DBBF60692D8185AF00465BFF /* SettingsViewController.swift */,
 				DBBF60652D81857900465BFF /* TaskViewController.swift */,
+				DB6FA56D2D9E8E8300633F8F /* DatePickerViewController.swift */,
+				DB6FA5692D9E870200633F8F /* AddTaskViewcontoller.swift */,
 			);
 			path = Controllers;
 			sourceTree = "<group>";
@@ -355,17 +364,20 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DB6FA5712D9FA1FC00633F8F /* Taskraal.xcdatamodeld in Sources */,
 				DBB1FFB82D7F52BE00FBA4A7 /* PriorityLevel.swift in Sources */,
-				DBB1FF362D75F57700FBA4A7 /* Taskraal.xcdatamodeld in Sources */,
+				DB6FA56C2D9E886000633F8F /* CategoryDetailViewController.swift in Sources */,
 				DBBF60682D81859D00465BFF /* CategoriesViewController.swift in Sources */,
 				DBBF60662D81857900465BFF /* TaskViewController.swift in Sources */,
 				DBBF60642D817E1E00465BFF /* MainTabBarController.swift in Sources */,
+				DB6FA56A2D9E870200633F8F /* AddTaskViewcontoller.swift in Sources */,
 				DBB1FF642D76079600FBA4A7 /* OnboardingViewController.swift in Sources */,
-				DBB1FFBB2D7F54E300FBA4A7 /* CoreDataManager.swift in Sources */,
 				DBB1FF672D7766F800FBA4A7 /* UIView+Extensions.swift in Sources */,
 				DB6FA5682D9E862800633F8F /* TaskCell.swift in Sources */,
 				DBB1FF2C2D75F57700FBA4A7 /* AppDelegate.swift in Sources */,
+				DB6FA56E2D9E8E8300633F8F /* DatePickerViewController.swift in Sources */,
 				DBB1FF692D7769A200FBA4A7 /* OnboardingSlide.swift in Sources */,
+				DB6FA57B2D9FA74400633F8F /* CoreDataManger.swift in Sources */,
 				DBBF606A2D8185AF00465BFF /* SettingsViewController.swift in Sources */,
 				DBB1FF6B2D776EC700FBA4A7 /* OnboardingCollectionViewCell.swift in Sources */,
 				DBB1FF2E2D75F57700FBA4A7 /* SceneDelegate.swift in Sources */,
@@ -717,13 +729,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCVersionGroup section */
-		DBB1FF342D75F57700FBA4A7 /* Taskraal.xcdatamodeld */ = {
+		DB6FA56F2D9FA1FC00633F8F /* Taskraal.xcdatamodeld */ = {
 			isa = XCVersionGroup;
 			children = (
-				DBB1FF352D75F57700FBA4A7 /* Taskraal.xcdatamodel */,
+				DB6FA5702D9FA1FC00633F8F /* Taskraal.xcdatamodel */,
 			);
-			currentVersion = DBB1FF352D75F57700FBA4A7 /* Taskraal.xcdatamodel */;
-			path = Taskraal.xcdatamodeld;
+			currentVersion = DB6FA5702D9FA1FC00633F8F /* Taskraal.xcdatamodel */;
+			name = Taskraal.xcdatamodeld;
+			path = /Users/vaibhavtiwary/Desktop/Taskraal/Taskraal.xcdatamodeld;
 			sourceTree = "<group>";
 			versionGroupType = wrapper.xcdatamodel;
 		};

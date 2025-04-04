@@ -13,6 +13,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
     
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        // Initialize Core Data by accessing the persistent container
+        _ = CoreDataManager.shared.persistentContainer
         
         // Test Core Data setup
         testCoreData()
@@ -34,43 +36,44 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         return UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
     }
     
-    func testCoreData() {
-        let context = CoreDataManager.shared.viewContext
-        
-        // Create a test category
-        let category = TaskCategory(context: context)
-        category.id = UUID()
-        category.name = "Test Category"
-        category.colorHex = "#FF5733"
-        category.dateCreated = Date()
-        
-        // Create a test task
-        // Create a test task
-        let task = TaskItem(context: context)
-        task.id = UUID()
-        task.title = "Test Task"
-        task.taskDescription = "This is a test task"
-        task.priority = 1 // Medium priority
-        task.isCompleted = false
-        task.dateCreated = Date()
-        task.lastModified = Date()
-        task.dueDate = Date().addingTimeInterval(86400) // Set due date to tomorrow
-        task.category = category
-        
-        // Save the context
+    func applicationWillTerminate(_ application: UIApplication) {
+        // Save changes when app terminates
         CoreDataManager.shared.saveContext()
+    }
+    
+    func testCoreData() {
+        // Create a test category using CoreDataManager
+        guard let category = CoreDataManager.shared.createCategory(
+            name: "Test Category",
+            colorHex: "#FF5733"
+        ) else {
+            print("Failed to create test category")
+            return
+        }
         
-        // Test fetching
-        let fetchRequest: NSFetchRequest<TaskItem> = TaskItem.fetchRequest()
-        do {
-            let tasks = try context.fetch(fetchRequest)
-            print("Successfully fetched \(tasks.count) tasks")
-            if let task = tasks.first {
-                print("Task title: \(task.title ?? "No title")")
-                print("Task category: \(task.category?.name ?? "No category")")
+        // Create a test task using CoreDataManager
+        guard let task = CoreDataManager.shared.createTask(
+            title: "Test Task",
+            details: "This is a test task",
+            dueDate: Date().addingTimeInterval(86400), // Set due date to tomorrow
+            priority: .medium,
+            category: category
+        ) else {
+            print("Failed to create test task")
+            return
+        }
+        
+        // Test fetching tasks
+        let tasks = CoreDataManager.shared.fetchTasks()
+        print("Successfully fetched \(tasks.count) tasks")
+        
+        if let task = tasks.first {
+            print("Task title: \(task.value(forKey: "title") as? String ?? "No title")")
+            if let categoryObj = task.value(forKey: "category") as? NSManagedObject {
+                print("Task category: \(categoryObj.value(forKey: "name") as? String ?? "No name")")
+            } else {
+                print("Task has no category")
             }
-        } catch {
-            print("Error fetching tasks: \(error)")
         }
     }
 }
