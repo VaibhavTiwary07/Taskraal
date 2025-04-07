@@ -10,8 +10,7 @@ import UIKit
 class CategoryDetailViewController: UIViewController {
     
     // MARK: - Properties
-    private let neumorphicBackgroundColor = UIColor(red: 240/255, green: 243/255, blue: 245/255, alpha: 1.0)
-    private let accentColor = UIColor(red: 94/255, green: 132/255, blue: 226/255, alpha: 1.0)
+    private let themeManager = ThemeManager.shared
     private var categoryName: String
     private var categoryColor: UIColor
     private var tasks: [(title: String, dueDate: Date?, priority: PriorityLevel, isCompleted: Bool)] = []
@@ -112,16 +111,28 @@ class CategoryDetailViewController: UIViewController {
         setupEmptyState()
         setupAddButton()
         createMockData()
+        
+        // Listen for theme changes
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleThemeChanged),
+            name: NSNotification.Name("AppThemeChanged"),
+            object: nil
+        )
     }
     
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        applyNeumorphicStyles()
+        applyThemeAndStyles()
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
     
     // MARK: - Setup
     private func setupView() {
-        view.backgroundColor = neumorphicBackgroundColor
+        view.backgroundColor = themeManager.backgroundColor
         title = categoryName
         
         // Configure navigation bar
@@ -135,6 +146,18 @@ class CategoryDetailViewController: UIViewController {
             target: self,
             action: #selector(editCategoryTapped)
         )
+        
+        // Modern appearance for iOS 15+
+        if #available(iOS 15.0, *) {
+            let appearance = UINavigationBarAppearance()
+            appearance.configureWithOpaqueBackground()
+            appearance.backgroundColor = themeManager.backgroundColor
+            appearance.titleTextAttributes = [.foregroundColor: themeManager.textColor]
+            appearance.shadowColor = .clear
+            
+            navigationController?.navigationBar.standardAppearance = appearance
+            navigationController?.navigationBar.scrollEdgeAppearance = appearance
+        }
     }
     
     private func setupHeader() {
@@ -174,6 +197,8 @@ class CategoryDetailViewController: UIViewController {
         // Set values
         colorIndicator.backgroundColor = categoryColor
         categoryLabel.text = categoryName
+        categoryLabel.textColor = themeManager.textColor
+        taskCountLabel.textColor = themeManager.secondaryTextColor
     }
     
     private func setupTableView() {
@@ -190,6 +215,7 @@ class CategoryDetailViewController: UIViewController {
         tableView.delegate = self
         tableView.dataSource = self
         tableView.rowHeight = 100
+        tableView.backgroundColor = themeManager.backgroundColor
     }
     
     private func setupEmptyState() {
@@ -217,6 +243,10 @@ class CategoryDetailViewController: UIViewController {
             paddingTop: 16
         )
         emptyStateLabel.centerX(in: emptyStateView)
+        
+        // Set colors
+        emptyStateImageView.tintColor = themeManager.secondaryTextColor.withAlphaComponent(0.5)
+        emptyStateLabel.textColor = themeManager.secondaryTextColor
     }
     
     private func setupAddButton() {
@@ -228,17 +258,30 @@ class CategoryDetailViewController: UIViewController {
             height: 56
         )
         
+        addButton.backgroundColor = themeManager.currentThemeColor
         addButton.addTarget(self, action: #selector(addTaskTapped), for: .touchUpInside)
     }
     
-    private func applyNeumorphicStyles() {
-        // Apply neumorphic effect to the header
+    private func applyThemeAndStyles() {
+        // Update background colors
+        view.backgroundColor = themeManager.backgroundColor
+        tableView.backgroundColor = themeManager.backgroundColor
+        
+        // Update text colors
+        categoryLabel.textColor = themeManager.textColor
+        taskCountLabel.textColor = themeManager.secondaryTextColor
+        emptyStateLabel.textColor = themeManager.secondaryTextColor
+        emptyStateImageView.tintColor = themeManager.secondaryTextColor.withAlphaComponent(0.5)
+        
+        // Apply neumorphic effect to the header with container background color
+        headerView.backgroundColor = themeManager.containerBackgroundColor
         headerView.addNeumorphicEffect(
             cornerRadius: 20,
-            backgroundColor: neumorphicBackgroundColor
+            backgroundColor: themeManager.containerBackgroundColor
         )
         
         // Apply neumorphic effect to the add button
+        addButton.backgroundColor = themeManager.currentThemeColor
         addButton.layer.shadowColor = UIColor.black.cgColor
         addButton.layer.shadowOffset = CGSize(width: 4, height: 4)
         addButton.layer.shadowOpacity = 0.3
@@ -267,6 +310,12 @@ class CategoryDetailViewController: UIViewController {
         
         // Add new inner glow
         addButton.layer.insertSublayer(innerGlow, at: 0)
+    }
+    
+    @objc private func handleThemeChanged() {
+        applyThemeAndStyles()
+        setupView() // Update navigation bar
+        tableView.reloadData() // Update cell appearance
     }
     
     // MARK: - Actions

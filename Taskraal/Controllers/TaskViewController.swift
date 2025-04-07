@@ -11,8 +11,7 @@ import CoreData
 class TasksViewController: UIViewController {
     
     // MARK: - Properties
-    private let neumorphicBackgroundColor = UIColor(red: 240/255, green: 243/255, blue: 245/255, alpha: 1.0)
-    private let accentColor = UIColor(red: 94/255, green: 132/255, blue: 226/255, alpha: 1.0)
+    private let themeManager = ThemeManager.shared
     private var tasks: [NSManagedObject] = []
     private var filteredTasks: [NSManagedObject] = []
     private var isSearching: Bool = false
@@ -27,7 +26,7 @@ class TasksViewController: UIViewController {
         return table
     }()
     
-    private let headerView: UIView = {
+    private let mainContainerView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
@@ -48,12 +47,6 @@ class TasksViewController: UIViewController {
         label.font = UIFont.systemFont(ofSize: 16, weight: .medium)
         label.textColor = UIColor(red: 130/255, green: 140/255, blue: 150/255, alpha: 1.0)
         return label
-    }()
-    
-    private let searchContainer: UIView = {
-        let view = UIView()
-        view.translatesAutoresizingMaskIntoConstraints = false
-        return view
     }()
     
     private let searchIconView: UIImageView = {
@@ -121,12 +114,19 @@ class TasksViewController: UIViewController {
         super.viewDidLoad()
         setupView()
         setupHeader()
-        setupSearchBar()
         setupTableView()
         setupEmptyState()
         setupAddButton()
         setupRefreshControl()
         setupNotificationObservers()
+        
+        // Listen for theme changes
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleThemeChanged),
+            name: NSNotification.Name("AppThemeChanged"),
+            object: nil
+        )
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -136,7 +136,13 @@ class TasksViewController: UIViewController {
     
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        applyNeumorphicStyles()
+        applyThemeAndStyles()
+    }
+    
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        // Ensure neumorphic effects are applied after view appears
+        applyThemeAndStyles()
     }
     
     deinit {
@@ -145,67 +151,85 @@ class TasksViewController: UIViewController {
     
     // MARK: - Setup
     private func setupView() {
-        view.backgroundColor = neumorphicBackgroundColor
+        view.backgroundColor = themeManager.backgroundColor
         title = "Tasks"
         navigationController?.navigationBar.prefersLargeTitles = false
         navigationController?.navigationBar.isTranslucent = true
         navigationItem.largeTitleDisplayMode = .never
+        
+        // Ensure navigation bar uses correct colors
+        navigationController?.navigationBar.tintColor = themeManager.currentThemeColor
+        navigationController?.navigationBar.barTintColor = themeManager.backgroundColor
+        
+        if #available(iOS 15.0, *) {
+            let appearance = UINavigationBarAppearance()
+            appearance.configureWithOpaqueBackground()
+            appearance.backgroundColor = themeManager.backgroundColor
+            appearance.shadowColor = .clear
+            navigationController?.navigationBar.standardAppearance = appearance
+            navigationController?.navigationBar.scrollEdgeAppearance = appearance
+        }
     }
     
     private func setupHeader() {
-        view.addSubview(headerView)
-        headerView.addSubviews(headerLabel, taskCountLabel)
+        view.addSubview(mainContainerView)
+        mainContainerView.addSubviews(headerLabel, taskCountLabel, searchIconView, searchTextField)
         
-        headerView.anchor(
+        mainContainerView.anchor(
             top: view.safeAreaLayoutGuide.topAnchor,
             leading: view.leadingAnchor,
             trailing: view.trailingAnchor,
             paddingTop: 16,
             paddingLeading: 20,
-            paddingTrailing: 20,
-            height: 40
+            paddingTrailing: 20
         )
         
         headerLabel.anchor(
-            top: headerView.topAnchor,
-            leading: headerView.leadingAnchor
+            top: mainContainerView.topAnchor,
+            leading: mainContainerView.leadingAnchor,
+            paddingTop: 16,
+            paddingLeading: 16
         )
         
         taskCountLabel.anchor(
-            top: headerView.topAnchor,
-            trailing: headerView.trailingAnchor
-        )
-    }
-    
-    private func setupSearchBar() {
-        view.addSubview(searchContainer)
-        searchContainer.addSubviews(searchIconView, searchTextField)
-        
-        searchContainer.anchor(
-            top: headerView.bottomAnchor,
-            leading: view.leadingAnchor,
-            trailing: view.trailingAnchor,
+            top: mainContainerView.topAnchor,
+            trailing: mainContainerView.trailingAnchor,
             paddingTop: 16,
-            paddingLeading: 20,
-            paddingTrailing: 20,
-            height: 50
+            paddingTrailing: 16
         )
         
         searchIconView.anchor(
-            leading: searchContainer.leadingAnchor,
+            top: headerLabel.bottomAnchor,
+            leading: mainContainerView.leadingAnchor,
+            paddingTop: 20,
             paddingLeading: 16,
             width: 20,
             height: 20
         )
-        searchIconView.centerY(in: searchContainer)
         
         searchTextField.anchor(
             leading: searchIconView.trailingAnchor,
-            trailing: searchContainer.trailingAnchor,
+            trailing: mainContainerView.trailingAnchor,
             paddingLeading: 12,
-            paddingTrailing: 16
+            paddingTrailing: 16,
+            height: 44
         )
-        searchTextField.centerY(in: searchContainer)
+        searchTextField.centerY(in: searchIconView)
+        
+        // Add bottom constraint to ensure proper sizing
+        searchTextField.bottomAnchor.constraint(equalTo: mainContainerView.bottomAnchor, constant: -16).isActive = true
+        
+        // Set text colors
+        headerLabel.textColor = themeManager.textColor
+        taskCountLabel.textColor = themeManager.secondaryTextColor
+        
+        // Set up search field
+        searchIconView.tintColor = themeManager.secondaryTextColor
+        searchTextField.textColor = themeManager.textColor
+        searchTextField.attributedPlaceholder = NSAttributedString(
+            string: "Search tasks...",
+            attributes: [NSAttributedString.Key.foregroundColor: themeManager.secondaryTextColor]
+        )
         
         searchTextField.delegate = self
         searchTextField.addTarget(self, action: #selector(searchTextChanged), for: .editingChanged)
@@ -214,7 +238,7 @@ class TasksViewController: UIViewController {
     private func setupTableView() {
         view.addSubview(tableView)
         tableView.anchor(
-            top: searchContainer.bottomAnchor,
+            top: mainContainerView.bottomAnchor,
             leading: view.leadingAnchor,
             bottom: view.safeAreaLayoutGuide.bottomAnchor,
             trailing: view.trailingAnchor,
@@ -225,6 +249,8 @@ class TasksViewController: UIViewController {
         tableView.delegate = self
         tableView.dataSource = self
         tableView.rowHeight = 100
+        tableView.backgroundColor = themeManager.backgroundColor
+        tableView.separatorStyle = .none
     }
     
     private func setupEmptyState() {
@@ -252,6 +278,10 @@ class TasksViewController: UIViewController {
             paddingTop: 16
         )
         emptyStateLabel.centerX(in: emptyStateView)
+        
+        // Set colors
+        emptyStateImageView.tintColor = themeManager.secondaryTextColor.withAlphaComponent(0.5)
+        emptyStateLabel.textColor = themeManager.secondaryTextColor
     }
     
     private func setupAddButton() {
@@ -261,16 +291,16 @@ class TasksViewController: UIViewController {
             trailing: view.trailingAnchor,
             paddingBottom: 24,
             paddingTrailing: 24,
-            
             width: 56,
             height: 56
         )
         
+        addButton.backgroundColor = themeManager.currentThemeColor
         addButton.addTarget(self, action: #selector(addTaskTapped), for: .touchUpInside)
     }
     
     private func setupRefreshControl() {
-        refreshControl.tintColor = accentColor
+        refreshControl.tintColor = themeManager.currentThemeColor
         refreshControl.addTarget(self, action: #selector(refreshData), for: .valueChanged)
         tableView.refreshControl = refreshControl
     }
@@ -284,22 +314,107 @@ class TasksViewController: UIViewController {
         )
     }
     
-    private func applyNeumorphicStyles() {
-        // Apply neumorphic effect to the search container
-        searchContainer.addNeumorphicEffect(
-            cornerRadius: 25,
-            backgroundColor: neumorphicBackgroundColor
+    private func applyThemeAndStyles() {
+        // Update colors based on theme
+        view.backgroundColor = themeManager.backgroundColor
+        tableView.backgroundColor = themeManager.backgroundColor
+        
+        // Update main container with proper background color
+        mainContainerView.backgroundColor = themeManager.containerBackgroundColor
+        
+        // Make sure shadows are only applied once the view has a valid frame
+        if mainContainerView.bounds.width > 0 && mainContainerView.bounds.height > 0 {
+            mainContainerView.addNeumorphicEffect(
+                cornerRadius: 25,
+                backgroundColor: themeManager.containerBackgroundColor
+            )
+        }
+        
+        // Update header and text colors
+        headerLabel.textColor = themeManager.textColor
+        taskCountLabel.textColor = themeManager.secondaryTextColor
+        
+        // Update search bar
+        searchIconView.tintColor = themeManager.secondaryTextColor
+        searchTextField.textColor = themeManager.textColor
+        searchTextField.attributedPlaceholder = NSAttributedString(
+            string: "Search tasks...",
+            attributes: [NSAttributedString.Key.foregroundColor: themeManager.secondaryTextColor]
         )
         
-        // Apply neumorphic effect to the add button
-        addButton.layer.shadowColor = UIColor.black.cgColor
-        addButton.layer.shadowOffset = CGSize(width: 4, height: 4)
-        addButton.layer.shadowOpacity = 0.3
-        addButton.layer.shadowRadius = 5
+        // Update empty state
+        emptyStateImageView.tintColor = themeManager.secondaryTextColor.withAlphaComponent(0.5)
+        emptyStateLabel.textColor = themeManager.secondaryTextColor
         
-        // Apply inner highlight to add button
+        // Update add button
+        updateAddButtonAppearance()
+    }
+    
+    @objc private func handleThemeChanged() {
+        // Update UI elements without forcing immediate layout
+        view.backgroundColor = themeManager.backgroundColor
+        tableView.backgroundColor = themeManager.backgroundColor
+        
+        // Update main container with proper background color
+        mainContainerView.backgroundColor = themeManager.containerBackgroundColor
+        
+        // Clean up any existing neumorphic effects
+        mainContainerView.subviews.forEach { subview in
+            if subview.tag == 1001 || subview.tag == 1002 {
+                subview.removeFromSuperview()
+            }
+        }
+        
+        // Apply neumorphic effect only if view is visible
+        if mainContainerView.bounds.width > 0 && mainContainerView.bounds.height > 0 {
+            mainContainerView.addNeumorphicEffect(
+                cornerRadius: 25,
+                backgroundColor: themeManager.containerBackgroundColor
+            )
+        }
+        
+        // Update text elements
+        headerLabel.textColor = themeManager.textColor
+        taskCountLabel.textColor = themeManager.secondaryTextColor
+        searchIconView.tintColor = themeManager.secondaryTextColor
+        searchTextField.textColor = themeManager.textColor
+        
+        // Update empty state
+        emptyStateImageView.tintColor = themeManager.secondaryTextColor.withAlphaComponent(0.5)
+        emptyStateLabel.textColor = themeManager.secondaryTextColor
+        
+        // Update add button with minimal redraws
+        updateAddButtonAppearance()
+        
+        // Important: Force a complete reload of the table view
+        // This is crucial for updating cell colors when theme changes
+        UIView.performWithoutAnimation {
+            tableView.reloadData()
+            
+            // Ensure visible cells are properly updated
+            for cell in tableView.visibleCells {
+                if let taskCell = cell as? TaskCell {
+                    taskCell.contentView.setNeedsLayout()
+                    taskCell.contentView.layoutIfNeeded()
+                }
+            }
+        }
+        
+        // Force layout updates
+        view.setNeedsLayout()
+        view.layoutIfNeeded()
+    }
+    
+    private func updateAddButtonAppearance() {
+        // Update add button with batched changes
+        addButton.backgroundColor = themeManager.currentThemeColor
+        
+        // Remove existing gradient layers
+        addButton.layer.sublayers?.removeAll(where: { $0 is CAGradientLayer })
+        
+        // Apply inner highlight to add button (simplified)
         let innerGlow = CAGradientLayer()
-        innerGlow.frame = CGRect(x: 0, y: 0, width: addButton.bounds.width, height: addButton.bounds.height)
+        innerGlow.frame = addButton.bounds
         innerGlow.cornerRadius = 28
         innerGlow.colors = [
             UIColor.white.withAlphaComponent(0.5).cgColor,
@@ -309,17 +424,16 @@ class TasksViewController: UIViewController {
         innerGlow.endPoint = CGPoint(x: 1, y: 1)
         innerGlow.locations = [0.0, 0.5]
         
-        // Remove existing inner glow if any
-        if let sublayers = addButton.layer.sublayers {
-            for layer in sublayers {
-                if layer is CAGradientLayer {
-                    layer.removeFromSuperlayer()
-                }
-            }
-        }
-        
-        // Add new inner glow
         addButton.layer.insertSublayer(innerGlow, at: 0)
+        
+        // Update shadows with batched changes
+        addButton.layer.shadowColor = UIColor.black.cgColor
+        addButton.layer.shadowOffset = CGSize(width: 4, height: 4)
+        addButton.layer.shadowOpacity = 0.3
+        addButton.layer.shadowRadius = 5
+        
+        // Update refresh control color
+        refreshControl.tintColor = themeManager.currentThemeColor
     }
     
     // MARK: - Actions

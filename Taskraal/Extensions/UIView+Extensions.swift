@@ -69,14 +69,24 @@ extension UIView {
 
 extension UIView {
     func addNeumorphicEffect(cornerRadius: CGFloat = 10,
-                            lightShadowColor: UIColor = UIColor.white.withAlphaComponent(0.7),
-                            darkShadowColor: UIColor = UIColor.black.withAlphaComponent(0.15),
+                            lightShadowColor: UIColor? = nil,
+                            darkShadowColor: UIColor? = nil,
                             shadowOffset: CGFloat = 7,
-                            shadowRadius: CGFloat = 8,
-                            backgroundColor: UIColor = UIColor(red: 240/255, green: 243/255, blue: 245/255, alpha: 1)) {
+                            shadowRadius: CGFloat? = nil,
+                            backgroundColor: UIColor? = nil) {
+        
+        // Get theme-based settings
+        let themeManager = ThemeManager.shared
+        let themeEffect = themeManager.getNeumorphicEffect(for: self)
+        
+        // Use provided values or theme defaults
+        let finalLightShadow = lightShadowColor ?? themeEffect.lightShadowColor
+        let finalDarkShadow = darkShadowColor ?? themeEffect.darkShadowColor
+        let finalShadowRadius = shadowRadius ?? themeEffect.shadowRadius
+        let finalBackgroundColor = backgroundColor ?? themeManager.backgroundColor
         
         // Set background color for the neumorphic effect
-        self.backgroundColor = backgroundColor
+        self.backgroundColor = finalBackgroundColor
         
         // Set corner radius
         self.layer.cornerRadius = cornerRadius
@@ -85,12 +95,147 @@ extension UIView {
         self.layer.shadowOpacity = 0
         layer.sublayers?.filter { $0.name == "neumorphicShadow" }.forEach { $0.removeFromSuperlayer() }
         
+        // Instead of using CALayer with inner shadow, use the main layer's shadow
+        // Create a neumorphic container that will handle the shadows
+        let neumorphicView = NeumorphicView(frame: bounds)
+        neumorphicView.tag = 1001 // Tag to identify it later
+        neumorphicView.translatesAutoresizingMaskIntoConstraints = false
+        neumorphicView.backgroundColor = .clear
+        
+        // Remove any existing neumorphic view
+        subviews.filter { $0.tag == 1001 }.forEach { $0.removeFromSuperview() }
+        
+        // Insert at the bottom
+        insertSubview(neumorphicView, at: 0)
+        
+        // Add constraints to make it resize with parent
+        NSLayoutConstraint.activate([
+            neumorphicView.topAnchor.constraint(equalTo: topAnchor),
+            neumorphicView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            neumorphicView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            neumorphicView.bottomAnchor.constraint(equalTo: bottomAnchor)
+        ])
+        
+        // Configure the neumorphic view with the shadow parameters
+        neumorphicView.configure(
+            cornerRadius: cornerRadius,
+            lightShadowColor: finalLightShadow,
+            darkShadowColor: finalDarkShadow,
+            shadowOffset: shadowOffset,
+            shadowRadius: finalShadowRadius,
+            backgroundColor: finalBackgroundColor
+        )
+        
+        // Force layout to ensure shadows are properly displayed
+        setNeedsLayout()
+    }
+    
+    func addInsetNeumorphicEffect(cornerRadius: CGFloat = 10,
+                                 lightShadowColor: UIColor? = nil,
+                                 darkShadowColor: UIColor? = nil,
+                                 shadowOffset: CGFloat = 5,
+                                 shadowRadius: CGFloat? = nil,
+                                 backgroundColor: UIColor? = nil) {
+        
+        // Get theme-based settings
+        let themeManager = ThemeManager.shared
+        let themeEffect = themeManager.getInsetNeumorphicEffect(for: self)
+        
+        // Use provided values or theme defaults
+        let finalLightShadow = lightShadowColor ?? themeEffect.lightShadowColor
+        let finalDarkShadow = darkShadowColor ?? themeEffect.darkShadowColor
+        let finalShadowRadius = shadowRadius ?? themeEffect.shadowRadius
+        let finalBackgroundColor = backgroundColor ?? themeManager.backgroundColor
+        
+        // Set background color
+        self.backgroundColor = finalBackgroundColor
+        
+        // Set corner radius
+        self.layer.cornerRadius = cornerRadius
+        
+        // Remove existing shadows
+        self.layer.shadowOpacity = 0
+        layer.sublayers?.filter { $0.name == "neumorphicShadow" }.forEach { $0.removeFromSuperlayer() }
+        
+        // Create a neumorphic container that will handle the shadows
+        let neumorphicView = InsetNeumorphicView(frame: bounds)
+        neumorphicView.tag = 1002 // Tag to identify it later
+        neumorphicView.translatesAutoresizingMaskIntoConstraints = false
+        neumorphicView.backgroundColor = .clear
+        
+        // Remove any existing neumorphic view
+        subviews.filter { $0.tag == 1002 }.forEach { $0.removeFromSuperview() }
+        
+        // Insert at the bottom
+        insertSubview(neumorphicView, at: 0)
+        
+        // Add constraints to make it resize with parent
+        NSLayoutConstraint.activate([
+            neumorphicView.topAnchor.constraint(equalTo: topAnchor),
+            neumorphicView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            neumorphicView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            neumorphicView.bottomAnchor.constraint(equalTo: bottomAnchor)
+        ])
+        
+        // Configure the neumorphic view with the shadow parameters
+        neumorphicView.configure(
+            cornerRadius: cornerRadius,
+            lightShadowColor: finalLightShadow,
+            darkShadowColor: finalDarkShadow,
+            shadowOffset: shadowOffset,
+            shadowRadius: finalShadowRadius,
+            backgroundColor: finalBackgroundColor
+        )
+        
+        // Force layout to ensure shadows are properly displayed
+        setNeedsLayout()
+    }
+    
+    // Apply theming to this view and all its subviews
+    func applyTheme() {
+        ThemeManager.shared.applyTheme(to: self)
+    }
+}
+
+// MARK: - Custom Neumorphic View Classes
+class NeumorphicView: UIView {
+    // Shadow properties
+    private var cornerRadius: CGFloat = 10
+    private var lightShadowColor: UIColor = .white
+    private var darkShadowColor: UIColor = UIColor(white: 0.8, alpha: 1.0)
+    private var shadowOffset: CGFloat = 7
+    private var shadowRadius: CGFloat = 8
+    private var bgColor: UIColor = .white
+    
+    func configure(
+        cornerRadius: CGFloat,
+        lightShadowColor: UIColor,
+        darkShadowColor: UIColor,
+        shadowOffset: CGFloat,
+        shadowRadius: CGFloat,
+        backgroundColor: UIColor
+    ) {
+        self.cornerRadius = cornerRadius
+        self.lightShadowColor = lightShadowColor
+        self.darkShadowColor = darkShadowColor
+        self.shadowOffset = shadowOffset
+        self.shadowRadius = shadowRadius
+        self.bgColor = backgroundColor
+        
+        setNeedsLayout()
+    }
+    
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        
+        // Clear any existing layers
+        layer.sublayers?.removeAll()
+        
         // Create light shadow (top-left)
         let lightShadow = CALayer()
-        lightShadow.name = "neumorphicShadow"
-        lightShadow.frame = self.bounds
+        lightShadow.frame = bounds
         lightShadow.cornerRadius = cornerRadius
-        lightShadow.backgroundColor = backgroundColor.cgColor
+        lightShadow.backgroundColor = bgColor.cgColor
         lightShadow.shadowColor = lightShadowColor.cgColor
         lightShadow.shadowOffset = CGSize(width: -shadowOffset, height: -shadowOffset)
         lightShadow.shadowOpacity = 1
@@ -98,43 +243,58 @@ extension UIView {
         
         // Create dark shadow (bottom-right)
         let darkShadow = CALayer()
-        darkShadow.name = "neumorphicShadow"
-        darkShadow.frame = self.bounds
+        darkShadow.frame = bounds
         darkShadow.cornerRadius = cornerRadius
-        darkShadow.backgroundColor = backgroundColor.cgColor
+        darkShadow.backgroundColor = bgColor.cgColor
         darkShadow.shadowColor = darkShadowColor.cgColor
         darkShadow.shadowOffset = CGSize(width: shadowOffset, height: shadowOffset)
         darkShadow.shadowOpacity = 1
         darkShadow.shadowRadius = shadowRadius
         
-        // Add shadows to the view's layer
-        self.layer.insertSublayer(lightShadow, at: 0)
-        self.layer.insertSublayer(darkShadow, at: 0)
+        // Add shadow layers
+        layer.addSublayer(lightShadow)
+        layer.addSublayer(darkShadow)
+    }
+}
+
+class InsetNeumorphicView: UIView {
+    // Shadow properties
+    private var cornerRadius: CGFloat = 10
+    private var lightShadowColor: UIColor = .white
+    private var darkShadowColor: UIColor = UIColor(white: 0.8, alpha: 1.0)
+    private var shadowOffset: CGFloat = 5
+    private var shadowRadius: CGFloat = 4
+    private var bgColor: UIColor = .white
+    
+    func configure(
+        cornerRadius: CGFloat,
+        lightShadowColor: UIColor,
+        darkShadowColor: UIColor,
+        shadowOffset: CGFloat,
+        shadowRadius: CGFloat,
+        backgroundColor: UIColor
+    ) {
+        self.cornerRadius = cornerRadius
+        self.lightShadowColor = lightShadowColor
+        self.darkShadowColor = darkShadowColor
+        self.shadowOffset = shadowOffset
+        self.shadowRadius = shadowRadius
+        self.bgColor = backgroundColor
+        
+        setNeedsLayout()
     }
     
-    func addInsetNeumorphicEffect(cornerRadius: CGFloat = 10,
-                                 lightShadowColor: UIColor = UIColor.black.withAlphaComponent(0.15),
-                                 darkShadowColor: UIColor = UIColor.white.withAlphaComponent(0.7),
-                                 shadowOffset: CGFloat = 5,
-                                 shadowRadius: CGFloat = 3,
-                                 backgroundColor: UIColor = UIColor(red: 240/255, green: 243/255, blue: 245/255, alpha: 1)) {
+    override func layoutSubviews() {
+        super.layoutSubviews()
         
-        // Set background color
-        self.backgroundColor = backgroundColor
+        // Clear any existing layers
+        layer.sublayers?.removeAll()
         
-        // Set corner radius
-        self.layer.cornerRadius = cornerRadius
-        
-        // Remove existing shadows
-        self.layer.shadowOpacity = 0
-        layer.sublayers?.filter { $0.name == "neumorphicShadow" }.forEach { $0.removeFromSuperlayer() }
-        
-        // Create inner shadows (inset effect)
+        // Create inner shadow layers
         let innerShadowLayer = CALayer()
-        innerShadowLayer.name = "neumorphicShadow"
         innerShadowLayer.frame = bounds
         innerShadowLayer.cornerRadius = cornerRadius
-        innerShadowLayer.backgroundColor = backgroundColor.cgColor
+        innerShadowLayer.backgroundColor = bgColor.cgColor
         innerShadowLayer.shadowColor = darkShadowColor.cgColor
         innerShadowLayer.shadowOffset = CGSize(width: -shadowOffset, height: -shadowOffset)
         innerShadowLayer.shadowOpacity = 1
@@ -142,10 +302,9 @@ extension UIView {
         innerShadowLayer.masksToBounds = true
         
         let innerShadowLayer2 = CALayer()
-        innerShadowLayer2.name = "neumorphicShadow"
         innerShadowLayer2.frame = bounds
         innerShadowLayer2.cornerRadius = cornerRadius
-        innerShadowLayer2.backgroundColor = backgroundColor.cgColor
+        innerShadowLayer2.backgroundColor = bgColor.cgColor
         innerShadowLayer2.shadowColor = lightShadowColor.cgColor
         innerShadowLayer2.shadowOffset = CGSize(width: shadowOffset, height: shadowOffset)
         innerShadowLayer2.shadowOpacity = 1
@@ -153,7 +312,7 @@ extension UIView {
         innerShadowLayer2.masksToBounds = true
         
         // Add inner shadow layers
-        self.layer.insertSublayer(innerShadowLayer, at: 0)
-        self.layer.insertSublayer(innerShadowLayer2, at: 0)
+        layer.addSublayer(innerShadowLayer)
+        layer.addSublayer(innerShadowLayer2)
     }
 }

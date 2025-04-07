@@ -26,8 +26,7 @@ class AddTaskViewController: UIViewController {
     
     // MARK: - Properties
     weak var delegate: AddTaskViewControllerDelegate?
-    private let neumorphicBackgroundColor = UIColor(red: 240/255, green: 243/255, blue: 245/255, alpha: 1.0)
-    private let accentColor = UIColor(red: 94/255, green: 132/255, blue: 226/255, alpha: 1.0)
+    private let themeManager = ThemeManager.shared
     private let titlePlaceholder = "Task title"
     private let detailsPlaceholder = "Task details (optional)"
     private var selectedPriority: PriorityLevel = .medium
@@ -35,9 +34,15 @@ class AddTaskViewController: UIViewController {
     private var selectedCategoryObject: NSManagedObject?
     private var selectedDate: Date?
     
+    // Cache categories to avoid repeated fetching
+    private var cachedCategories: [(name: String, object: NSManagedObject)] = []
+    
     // Editing mode properties
     var isEditingTask: Bool = false
     var taskToEdit: NSManagedObject?
+    
+    // Keyboard handling
+    private var keyboardHeight: CGFloat = 0
     
     // MARK: - UI Elements
     private let scrollView: UIScrollView = {
@@ -166,11 +171,25 @@ class AddTaskViewController: UIViewController {
         setupSaveButton()
         setupGestureRecognizers()
         setupTextViewDelegate()
+        setupKeyboardObservers()
+        
+        // Pre-fetch categories for smoother category selection
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            self?.cachedCategories = self?.fetchCategories() ?? []
+        }
+        
+        // Listen for theme changes
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleThemeChanged),
+            name: NSNotification.Name("AppThemeChanged"),
+            object: nil
+        )
     }
     
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        applyNeumorphicStyles()
+        applyThemeAndStyles()
     }
     
     override func viewDidAppear(_ animated: Bool) {
@@ -178,10 +197,14 @@ class AddTaskViewController: UIViewController {
         titleTextField.becomeFirstResponder()
     }
     
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+    
     // MARK: - Setup
     private func setupView() {
-        view.backgroundColor = neumorphicBackgroundColor
-        title = "Add Task"
+        view.backgroundColor = themeManager.backgroundColor
+        title = isEditingTask ? "Edit Task" : "Add Task"
     }
     
     private func setupNavigationBar() {
@@ -190,16 +213,31 @@ class AddTaskViewController: UIViewController {
             target: self,
             action: #selector(cancelButtonTapped)
         )
-        cancelButton.tintColor = UIColor(red: 60/255, green: 80/255, blue: 100/255, alpha: 1.0)
+        cancelButton.tintColor = themeManager.textColor
         navigationItem.leftBarButtonItem = cancelButton
         
         navigationController?.navigationBar.setBackgroundImage(UIImage(), for: .default)
         navigationController?.navigationBar.shadowImage = UIImage()
-        navigationController?.navigationBar.tintColor = accentColor
+        navigationController?.navigationBar.tintColor = themeManager.currentThemeColor
         navigationController?.navigationBar.titleTextAttributes = [
-            NSAttributedString.Key.foregroundColor: UIColor(red: 60/255, green: 80/255, blue: 100/255, alpha: 1.0),
+            NSAttributedString.Key.foregroundColor: themeManager.textColor,
             NSAttributedString.Key.font: UIFont.systemFont(ofSize: 18, weight: .semibold)
         ]
+        
+        // Modern appearance for iOS 15+
+        if #available(iOS 15.0, *) {
+            let appearance = UINavigationBarAppearance()
+            appearance.configureWithOpaqueBackground()
+            appearance.backgroundColor = themeManager.backgroundColor
+            appearance.titleTextAttributes = [
+                NSAttributedString.Key.foregroundColor: themeManager.textColor,
+                NSAttributedString.Key.font: UIFont.systemFont(ofSize: 18, weight: .semibold)
+            ]
+            appearance.shadowColor = .clear
+            
+            navigationController?.navigationBar.standardAppearance = appearance
+            navigationController?.navigationBar.scrollEdgeAppearance = appearance
+        }
     }
     
     private func setupScrollView() {
@@ -373,6 +411,7 @@ class AddTaskViewController: UIViewController {
     
     private func setupGestureRecognizers() {
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
+        tapGesture.cancelsTouchesInView = false
         view.addGestureRecognizer(tapGesture)
     }
     
@@ -380,26 +419,115 @@ class AddTaskViewController: UIViewController {
         detailsTextView.delegate = self
     }
     
-    private func applyNeumorphicStyles() {
-        // Title container
-        titleContainer.addNeumorphicEffect(
-            cornerRadius: 15,
-            backgroundColor: neumorphicBackgroundColor
+    private func setupKeyboardObservers() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(keyboardWillShow),
+            name: UIResponder.keyboardWillShowNotification,
+            object: nil
         )
         
-        // Details container
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(keyboardWillHide),
+            name: UIResponder.keyboardWillHideNotification,
+            object: nil
+        )
+    }
+    
+    @objc private func keyboardWillShow(_ notification: Notification) {
+        guard let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else {
+            return
+        }
+        
+        let keyboardHeight = keyboardFrame.height
+        self.keyboardHeight = keyboardHeight
+        
+        // Adjust scroll view insets
+        scrollView.contentInset.bottom = keyboardHeight
+        scrollView.scrollIndicatorInsets.bottom = keyboardHeight
+        
+        // Find the active text field and scroll to it
+        if titleTextField.isFirstResponder {
+            scrollToVisible(view: titleContainer)
+        } else if detailsTextView.isFirstResponder {
+            scrollToVisible(view: detailsContainer)
+        }
+    }
+    
+    @objc private func keyboardWillHide(_ notification: Notification) {
+        // Reset content inset
+        scrollView.contentInset.bottom = 0
+        scrollView.scrollIndicatorInsets.bottom = 0
+        self.keyboardHeight = 0
+    }
+    
+    private func scrollToVisible(view: UIView) {
+        let rect = scrollView.convert(view.frame, from: view.superview)
+        let visibleRect = CGRect(
+            x: rect.origin.x,
+            y: rect.origin.y,
+            width: rect.width,
+            height: rect.height + 20 // Add some padding
+        )
+        scrollView.scrollRectToVisible(visibleRect, animated: true)
+    }
+    
+    private func applyThemeAndStyles() {
+        // Update background color
+        view.backgroundColor = themeManager.backgroundColor
+        scrollView.backgroundColor = themeManager.backgroundColor
+        contentView.backgroundColor = themeManager.backgroundColor
+        
+        // Update text colors
+        titleTextField.textColor = themeManager.textColor
+        titleTextField.attributedPlaceholder = NSAttributedString(
+            string: titlePlaceholder,
+            attributes: [NSAttributedString.Key.foregroundColor: themeManager.secondaryTextColor]
+        )
+        
+        if detailsTextView.text == detailsPlaceholder {
+            detailsTextView.textColor = themeManager.secondaryTextColor
+        } else {
+            detailsTextView.textColor = themeManager.textColor
+        }
+        
+        priorityLabel.textColor = themeManager.textColor
+        categoryLabel.textColor = themeManager.textColor
+        dateLabel.textColor = themeManager.textColor
+        
+        if categoryButton.title(for: .normal) == "Select category" {
+            categoryButton.setTitleColor(themeManager.secondaryTextColor, for: .normal)
+        } else {
+            categoryButton.setTitleColor(themeManager.textColor, for: .normal)
+        }
+        
+        if dateButton.title(for: .normal) == "Set date" {
+            dateButton.setTitleColor(themeManager.secondaryTextColor, for: .normal)
+        } else {
+            dateButton.setTitleColor(themeManager.textColor, for: .normal)
+        }
+        
+        // Apply neumorphic styles with container background color
+        titleContainer.backgroundColor = themeManager.containerBackgroundColor
+        titleContainer.addNeumorphicEffect(
+            cornerRadius: 15,
+            backgroundColor: themeManager.containerBackgroundColor
+        )
+        
+        detailsContainer.backgroundColor = themeManager.containerBackgroundColor
         detailsContainer.addNeumorphicEffect(
             cornerRadius: 15,
-            backgroundColor: neumorphicBackgroundColor
+            backgroundColor: themeManager.containerBackgroundColor
         )
         
         // Add neumorphic effect to segmented control
-        prioritySegmentedControl.backgroundColor = neumorphicBackgroundColor
+        prioritySegmentedControl.backgroundColor = themeManager.containerBackgroundColor
         prioritySegmentedControl.layer.cornerRadius = 10
         
         // Use system colors for priority with transparency
         prioritySegmentedControl.setTitleTextAttributes([
-            .foregroundColor: UIColor(red: 160/255, green: 170/255, blue: 180/255, alpha: 1.0)
+            .foregroundColor: themeManager.secondaryTextColor
         ], for: .normal)
         
         prioritySegmentedControl.setTitleTextAttributes([
@@ -410,19 +538,21 @@ class AddTaskViewController: UIViewController {
         let selectedPriorityColor = PriorityLevel(rawValue: Int16(prioritySegmentedControl.selectedSegmentIndex)) ?? .medium
         prioritySegmentedControl.selectedSegmentTintColor = selectedPriorityColor.color
         
-        // Category button
+        // Apply neumorphic effect to category and date buttons with container background color
+        categoryButton.backgroundColor = themeManager.containerBackgroundColor
         categoryButton.addNeumorphicEffect(
             cornerRadius: 15,
-            backgroundColor: neumorphicBackgroundColor
+            backgroundColor: themeManager.containerBackgroundColor
         )
         
-        // Date button
+        dateButton.backgroundColor = themeManager.containerBackgroundColor
         dateButton.addNeumorphicEffect(
             cornerRadius: 15,
-            backgroundColor: neumorphicBackgroundColor
+            backgroundColor: themeManager.containerBackgroundColor
         )
         
-        // Save button
+        // Update save button
+        saveButton.backgroundColor = themeManager.currentThemeColor
         saveButton.layer.shadowColor = UIColor.black.cgColor
         saveButton.layer.shadowOffset = CGSize(width: 4, height: 4)
         saveButton.layer.shadowOpacity = 0.2
@@ -451,6 +581,24 @@ class AddTaskViewController: UIViewController {
         
         // Add new inner glow
         saveButton.layer.insertSublayer(innerGlow, at: 0)
+        
+        // Update navigation bar
+        navigationController?.navigationBar.tintColor = themeManager.currentThemeColor
+        navigationController?.navigationBar.titleTextAttributes = [
+            NSAttributedString.Key.foregroundColor: themeManager.textColor,
+            NSAttributedString.Key.font: UIFont.systemFont(ofSize: 18, weight: .semibold)
+        ]
+    }
+    
+    @objc private func handleThemeChanged() {
+        applyThemeAndStyles()
+        
+        // Update navigation bar
+        setupNavigationBar()
+        
+        // Force layout update
+        view.setNeedsLayout()
+        view.layoutIfNeeded()
     }
     
     // MARK: - Core Data
@@ -552,25 +700,47 @@ class AddTaskViewController: UIViewController {
     }
     
     @objc private func categoryButtonTapped() {
-        // Fetch categories from Core Data
-        let categories = fetchCategories()
+        // First dismiss keyboard if showing
+        view.endEditing(true)
         
-        if categories.isEmpty {
-            // If there are no categories, create a new one
-            presentCreateCategoryAlert()
+        // Debugging
+        print("Category button tapped")
+        
+        // Fix common iPad crash
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            // Create a simple UIMenu for iPad instead of action sheet
+            let menu = UIMenu(title: "Select Category", children: createCategoryMenuActions())
+            categoryButton.menu = menu
+            categoryButton.showsMenuAsPrimaryAction = true
             return
         }
         
-        // Present category selection
+        // Use cached categories or load them now
+        var categories = self.cachedCategories
+        
+        if categories.isEmpty {
+            // Show loading state
+            categoryButton.setTitle("Loading categories...", for: .normal)
+            
+            // Immediately fetch categories
+            categories = fetchCategories()
+            self.cachedCategories = categories
+        }
+        
+        if categories.isEmpty {
+            // Create a default category if none exist
+            createDefaultCategory()
+            return
+        }
+        
+        // Present alert controller
         let alert = UIAlertController(title: "Select Category", message: nil, preferredStyle: .actionSheet)
         
-        // Add each category as an action
+        // Add menu actions
         for category in categories {
             let action = UIAlertAction(title: category.name, style: .default) { [weak self] _ in
-                self?.selectedCategory = category.name
-                self?.selectedCategoryObject = category.object
-                self?.categoryButton.setTitle(category.name, for: .normal)
-                self?.categoryButton.setTitleColor(UIColor(red: 60/255, green: 80/255, blue: 100/255, alpha: 1.0), for: .normal)
+                guard let self = self else { return }
+                self.selectCategory(name: category.name, object: category.object)
             }
             alert.addAction(action)
         }
@@ -582,59 +752,164 @@ class AddTaskViewController: UIViewController {
         
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
         
+        // For iPad, set the source view for the popover
+        if let popoverController = alert.popoverPresentationController {
+            popoverController.sourceView = categoryButton
+            popoverController.sourceRect = categoryButton.bounds
+        }
+        
         present(alert, animated: true)
     }
     
-    private func presentCreateCategoryAlert() {
-        let alert = UIAlertController(title: "New Category", message: "Enter a name for your category", preferredStyle: .alert)
+    private func createCategoryMenuActions() -> [UIAction] {
+        var actions = [UIAction]()
         
-        alert.addTextField { textField in
-            textField.placeholder = "Category Name"
-            textField.autocapitalizationType = .words
+        // Add action for each existing category
+        for category in cachedCategories {
+            let action = UIAction(title: category.name) { [weak self] _ in
+                guard let self = self else { return }
+                self.selectCategory(name: category.name, object: category.object)
+            }
+            actions.append(action)
         }
         
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        // Add create new category action
+        let createAction = UIAction(title: "Create New Category") { [weak self] _ in
+            self?.presentCreateCategoryAlert()
+        }
+        actions.append(createAction)
         
-        alert.addAction(UIAlertAction(title: "Create", style: .default) { [weak self] _ in
-            guard let self = self,
-                  let textField = alert.textFields?.first,
-                  let categoryName = textField.text,
-                  !categoryName.isEmpty else { return }
-            
-            // Create category in Core Data
-            let context = CoreDataManager.shared.viewContext
-            let entity = NSEntityDescription.entity(forEntityName: "Category", in: context)!
-            let category = NSManagedObject(entity: entity, insertInto: context)
-            
-            // Set properties
-            category.setValue(UUID(), forKey: "id")
-            category.setValue(categoryName, forKey: "name")
-            category.setValue("#0A84FF", forKey: "colorHex") // Default color
-            
-            // Save context
-            do {
-                try context.save()
-                
-                // Update UI
-                self.selectedCategory = categoryName
-                self.selectedCategoryObject = category
-                self.categoryButton.setTitle(categoryName, for: .normal)
-                self.categoryButton.setTitleColor(UIColor(red: 60/255, green: 80/255, blue: 100/255, alpha: 1.0), for: .normal)
-                
-                // Add haptic feedback
-                let generator = UINotificationFeedbackGenerator()
-                generator.notificationOccurred(.success)
-            } catch {
-                print("Error creating category: \(error)")
-                self.showAlert(title: "Error", message: "Failed to create category. Please try again.")
-            }
+        return actions
+    }
+    
+    private func selectCategory(name: String, object: NSManagedObject) {
+        // Update with animation
+        UIView.transition(with: self.categoryButton, duration: 0.2, options: .transitionCrossDissolve, animations: {
+            self.selectedCategory = name
+            self.selectedCategoryObject = object
+            self.categoryButton.setTitle(name, for: .normal)
+            self.categoryButton.setTitleColor(self.themeManager.textColor, for: .normal)
         })
         
-        present(alert, animated: true)
+        // Add subtle haptic feedback
+        let generator = UISelectionFeedbackGenerator()
+        generator.selectionChanged()
+    }
+    
+    private func createDefaultCategory() {
+        print("Creating default category since none exist")
+        
+        // Show loading state
+        UIView.transition(with: self.categoryButton, duration: 0.2, options: .transitionCrossDissolve, animations: {
+            self.categoryButton.setTitle("Creating default category...", for: .normal)
+        })
+        
+        // Create category in Core Data
+        let context = CoreDataManager.shared.viewContext
+        let entity = NSEntityDescription.entity(forEntityName: "Category", in: context)!
+        let category = NSManagedObject(entity: entity, insertInto: context)
+        
+        // Set properties
+        let defaultName = "General"
+        category.setValue(UUID(), forKey: "id")
+        category.setValue(defaultName, forKey: "name")
+        category.setValue("#0A84FF", forKey: "colorHex") // Default color
+        
+        // Save context
+        do {
+            try context.save()
+            
+            // Update cached categories
+            self.cachedCategories.append((name: defaultName, object: category))
+            
+            // Update UI
+            selectCategory(name: defaultName, object: category)
+        } catch {
+            print("Error creating default category: \(error)")
+            
+            // Reset button state
+            UIView.transition(with: self.categoryButton, duration: 0.2, options: .transitionCrossDissolve, animations: {
+                self.categoryButton.setTitle("Select category", for: .normal)
+                self.categoryButton.setTitleColor(self.themeManager.secondaryTextColor, for: .normal)
+            })
+        }
     }
     
     @objc private func dateButtonTapped() {
-        // Create date picker view controller
+        // First dismiss keyboard if showing
+        view.endEditing(true)
+        
+        // Debugging
+        print("Date button tapped")
+        
+        // Show loading state with animation
+        UIView.transition(with: dateButton, duration: 0.2, options: .transitionCrossDissolve, animations: {
+            self.dateButton.setTitle("Opening date picker...", for: .normal)
+        })
+        
+        // Use direct date picker instead of modal view if having issues
+        if UIDevice.current.userInterfaceIdiom == .phone {
+            // Create an inline date picker
+            let datePicker = UIDatePicker()
+            datePicker.datePickerMode = .dateAndTime
+            datePicker.minimumDate = Date()
+            datePicker.date = selectedDate ?? Date()
+            
+            if #available(iOS 13.4, *) {
+                datePicker.preferredDatePickerStyle = .wheels
+            }
+            
+            // Create alert with date picker
+            let alert = UIAlertController(title: "Select Due Date", message: nil, preferredStyle: .actionSheet)
+            
+            // Add date picker to the alert
+            alert.view.addSubview(datePicker)
+            
+            // Configure date picker constraints
+            datePicker.translatesAutoresizingMaskIntoConstraints = false
+            datePicker.topAnchor.constraint(equalTo: alert.view.topAnchor, constant: 50).isActive = true
+            datePicker.leadingAnchor.constraint(equalTo: alert.view.leadingAnchor, constant: 0).isActive = true
+            datePicker.trailingAnchor.constraint(equalTo: alert.view.trailingAnchor, constant: 0).isActive = true
+            
+            // Set the alert height to accommodate the date picker
+            let height: NSLayoutConstraint = NSLayoutConstraint(
+                item: alert.view!, attribute: .height, relatedBy: .equal,
+                toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: 300
+            )
+            alert.view.addConstraint(height)
+            
+            // Add actions
+            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { _ in
+                // Reset button text
+                self.dateButton.setTitle(self.selectedDate == nil ? "Set date" : self.formatDate(self.selectedDate!), for: .normal)
+            }))
+            
+            alert.addAction(UIAlertAction(title: "Done", style: .default, handler: { _ in
+                // Update selected date
+                self.selectedDate = datePicker.date
+                
+                // Update button with animation
+                UIView.transition(with: self.dateButton, duration: 0.3, options: .transitionCrossDissolve, animations: {
+                    self.dateButton.setTitle(self.formatDate(datePicker.date), for: .normal)
+                    self.dateButton.setTitleColor(self.themeManager.textColor, for: .normal)
+                })
+                
+                // Add subtle haptic feedback
+                let generator = UISelectionFeedbackGenerator()
+                generator.selectionChanged()
+            }))
+            
+            // For iPad, set the source view for the popover
+            if let popoverController = alert.popoverPresentationController {
+                popoverController.sourceView = dateButton
+                popoverController.sourceRect = dateButton.bounds
+            }
+            
+            present(alert, animated: true)
+            return
+        }
+        
+        // Fallback to standard DatePickerViewController for iPad
         let datePickerVC = DatePickerViewController()
         datePickerVC.delegate = self
         datePickerVC.initialDate = selectedDate ?? Date()
@@ -642,7 +917,23 @@ class AddTaskViewController: UIViewController {
         // Present date picker
         let navController = UINavigationController(rootViewController: datePickerVC)
         navController.modalPresentationStyle = .formSheet
-        present(navController, animated: true)
+        
+        present(navController, animated: true) {
+            // Reset button text if user dismisses without selecting
+            if self.dateButton.title(for: .normal) == "Opening date picker..." {
+                UIView.transition(with: self.dateButton, duration: 0.2, options: .transitionCrossDissolve, animations: {
+                    self.dateButton.setTitle(self.selectedDate == nil ? "Set date" : self.formatDate(self.selectedDate!), for: .normal)
+                })
+            }
+        }
+    }
+    
+    // Helper method to format date consistently
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
     }
     
     @objc private func saveButtonTapped() {
@@ -712,6 +1003,76 @@ class AddTaskViewController: UIViewController {
         // Change the save button title
         saveButton.setTitle("Update Task", for: .normal)
     }
+    
+    private func presentCreateCategoryAlert() {
+        // Show alert for creating a new category
+        let alert = UIAlertController(title: "New Category", message: "Enter a name for your category", preferredStyle: .alert)
+        
+        alert.addTextField { [weak self] textField in
+            textField.placeholder = "Category Name"
+            textField.autocapitalizationType = .words
+            textField.returnKeyType = .done
+            textField.textColor = self?.themeManager.textColor
+        }
+        
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        
+        let createAction = UIAlertAction(title: "Create", style: .default) { [weak self] _ in
+            guard let self = self,
+                  let textField = alert.textFields?.first,
+                  let categoryName = textField.text?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !categoryName.isEmpty else { return }
+            
+            // Show loading state
+            UIView.transition(with: self.categoryButton, duration: 0.2, options: .transitionCrossDissolve, animations: {
+                self.categoryButton.setTitle("Creating...", for: .normal)
+            })
+            
+            // Create category
+            let context = CoreDataManager.shared.viewContext
+            let entity = NSEntityDescription.entity(forEntityName: "Category", in: context)!
+            let category = NSManagedObject(entity: entity, insertInto: context)
+            
+            // Set properties
+            category.setValue(UUID(), forKey: "id")
+            category.setValue(categoryName, forKey: "name")
+            category.setValue("#0A84FF", forKey: "colorHex") // Default color
+            
+            // Save context
+            do {
+                try context.save()
+                
+                // Update cached categories
+                self.cachedCategories.append((name: categoryName, object: category))
+                
+                // Update UI
+                self.selectCategory(name: categoryName, object: category)
+                
+                // Add haptic feedback
+                let generator = UINotificationFeedbackGenerator()
+                generator.notificationOccurred(.success)
+            } catch {
+                print("Error creating category: \(error)")
+                
+                // Reset button state
+                UIView.transition(with: self.categoryButton, duration: 0.2, options: .transitionCrossDissolve, animations: {
+                    self.categoryButton.setTitle("Select category", for: .normal)
+                    self.categoryButton.setTitleColor(self.themeManager.secondaryTextColor, for: .normal)
+                })
+                
+                // Show error alert
+                self.showAlert(title: "Error", message: "Failed to create category. Please try again.")
+            }
+        }
+        
+        alert.addAction(createAction)
+        alert.preferredAction = createAction
+        
+        present(alert, animated: true) {
+            // Focus the text field
+            alert.textFields?.first?.becomeFirstResponder()
+        }
+    }
 }
 
 // MARK: - UITextViewDelegate
@@ -736,11 +1097,14 @@ extension AddTaskViewController: DatePickerViewControllerDelegate {
     func didSelectDate(_ date: Date) {
         selectedDate = date
         
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
+        // Update button with animation
+        UIView.transition(with: dateButton, duration: 0.3, options: .transitionCrossDissolve, animations: {
+            self.dateButton.setTitle(self.formatDate(date), for: .normal)
+            self.dateButton.setTitleColor(self.themeManager.textColor, for: .normal)
+        })
         
-        dateButton.setTitle(formatter.string(from: date), for: .normal)
-        dateButton.setTitleColor(UIColor(red: 60/255, green: 80/255, blue: 100/255, alpha: 1.0), for: .normal)
+        // Add subtle haptic feedback
+        let generator = UISelectionFeedbackGenerator()
+        generator.selectionChanged()
     }
 }

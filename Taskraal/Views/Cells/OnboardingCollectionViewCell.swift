@@ -13,7 +13,7 @@ class OnboardingCollectionViewCell: UICollectionViewCell {
     // MARK: - UI Components
     private let containerView: UIView = {
         let view = UIView()
-        view.backgroundColor = UIColor(red: 240/255, green: 243/255, blue: 245/255, alpha: 1)
+        view.backgroundColor = UIColor.white // Pure white background
         view.layer.cornerRadius = 20
         return view
     }()
@@ -23,12 +23,13 @@ class OnboardingCollectionViewCell: UICollectionViewCell {
         imageView.contentMode = .scaleAspectFit
         imageView.clipsToBounds = true
         imageView.layer.cornerRadius = 15
+        imageView.tintColor = UIColor(red: 94/255, green: 132/255, blue: 226/255, alpha: 1.0) // Blue accent
         return imageView
     }()
     
     private let slideTitleLabel: UILabel = {
         let label = UILabel()
-        label.textColor = UIColor(red: 70/255, green: 90/255, blue: 110/255, alpha: 1)
+        label.textColor = UIColor(red: 60/255, green: 80/255, blue: 100/255, alpha: 1.0) // Dark blue text
         label.font = UIFont.boldSystemFont(ofSize: 22)
         label.textAlignment = .center
         label.numberOfLines = 0
@@ -37,7 +38,7 @@ class OnboardingCollectionViewCell: UICollectionViewCell {
     
     private let slideSubtitleLabel: UILabel = {
         let label = UILabel()
-        label.textColor = UIColor(red: 120/255, green: 140/255, blue: 160/255, alpha: 1)
+        label.textColor = UIColor(red: 130/255, green: 140/255, blue: 150/255, alpha: 1.0) // Medium gray text
         label.font = UIFont.systemFont(ofSize: 16)
         label.textAlignment = .center
         label.numberOfLines = 0
@@ -46,7 +47,7 @@ class OnboardingCollectionViewCell: UICollectionViewCell {
     
     private let imageContainer: UIView = {
         let view = UIView()
-        view.backgroundColor = UIColor(red: 240/255, green: 243/255, blue: 245/255, alpha: 1)
+        view.backgroundColor = UIColor.white // Pure white background
         view.layer.cornerRadius = 15
         return view
     }()
@@ -64,9 +65,18 @@ class OnboardingCollectionViewCell: UICollectionViewCell {
     override func layoutSubviews() {
         super.layoutSubviews()
         
-        // Apply neumorphic effects after layout
-        containerView.addNeumorphicEffect(cornerRadius: 20)
-        imageContainer.addInsetNeumorphicEffect(cornerRadius: 15)
+        // Clean up any previous neumorphic effects
+        containerView.layer.sublayers?.filter { $0.name == "neumorphicShadow" }.forEach { $0.removeFromSuperlayer() }
+        imageContainer.layer.sublayers?.filter { $0.name == "neumorphicShadow" }.forEach { $0.removeFromSuperlayer() }
+        
+        // Apply neumorphic effects only if the view has valid dimensions
+        if containerView.bounds.width > 0 && containerView.bounds.height > 0 {
+            containerView.addNeumorphicEffect(cornerRadius: 20, backgroundColor: UIColor.white)
+        }
+        
+        if imageContainer.bounds.width > 0 && imageContainer.bounds.height > 0 {
+            imageContainer.addInsetNeumorphicEffect(cornerRadius: 15, backgroundColor: UIColor.white)
+        }
     }
     
     // MARK: - Setup
@@ -74,50 +84,57 @@ class OnboardingCollectionViewCell: UICollectionViewCell {
         backgroundColor = .clear
         contentView.backgroundColor = .clear
         
+        // Add container view to content view with proper constraints
         contentView.addSubview(containerView)
-        containerView.anchor(top: contentView.topAnchor,
-                            leading: contentView.leadingAnchor,
-                            bottom: contentView.bottomAnchor,
-                            trailing: contentView.trailingAnchor,
-                            paddingTop: 15,
-                            paddingLeading: 15,
-                            paddingBottom: 15,
-                            paddingTrailing: 15)
+        NSLayoutConstraint.activate([
+            containerView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 15),
+            containerView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 15),
+            containerView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -15),
+            containerView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -15)
+        ])
+        containerView.translatesAutoresizingMaskIntoConstraints = false
         
+        // Add image container with flexible height based on available space
         containerView.addSubview(imageContainer)
-        imageContainer.anchor(top: containerView.topAnchor,
-                             leading: containerView.leadingAnchor,
-                             trailing: containerView.trailingAnchor,
-                             paddingTop: 25,
-                             paddingLeading: 25,
-                             paddingTrailing: 25,
-                             height: contentView.frame.size.height * 0.45)
+        let imageContainerHeightConstraint = imageContainer.heightAnchor.constraint(equalTo: containerView.heightAnchor, multiplier: 0.45)
+        imageContainerHeightConstraint.priority = .defaultHigh // Lower priority to avoid conflicts
         
+        NSLayoutConstraint.activate([
+            imageContainer.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 25),
+            imageContainer.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 25),
+            imageContainer.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -25),
+            imageContainerHeightConstraint
+        ])
+        imageContainer.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Add image view with proper padding
         imageContainer.addSubview(slideImageView)
-        slideImageView.anchor(top: imageContainer.topAnchor,
-                             leading: imageContainer.leadingAnchor,
-                             bottom: imageContainer.bottomAnchor,
-                             trailing: imageContainer.trailingAnchor,
-                             paddingTop: 15,
-                             paddingLeading: 15,
-                             paddingBottom: 15,
-                             paddingTrailing: 15)
+        NSLayoutConstraint.activate([
+            slideImageView.topAnchor.constraint(equalTo: imageContainer.topAnchor, constant: 15),
+            slideImageView.leadingAnchor.constraint(equalTo: imageContainer.leadingAnchor, constant: 15),
+            slideImageView.trailingAnchor.constraint(equalTo: imageContainer.trailingAnchor, constant: -15),
+            slideImageView.bottomAnchor.constraint(equalTo: imageContainer.bottomAnchor, constant: -15)
+        ])
+        slideImageView.translatesAutoresizingMaskIntoConstraints = false
         
+        // Add title label with proper constraints
         containerView.addSubview(slideTitleLabel)
-        slideTitleLabel.anchor(top: imageContainer.bottomAnchor,
-                              leading: containerView.leadingAnchor,
-                              trailing: containerView.trailingAnchor,
-                              paddingTop: 25,
-                              paddingLeading: 20,
-                              paddingTrailing: 20)
+        NSLayoutConstraint.activate([
+            slideTitleLabel.topAnchor.constraint(equalTo: imageContainer.bottomAnchor, constant: 25),
+            slideTitleLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 20),
+            slideTitleLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -20)
+        ])
+        slideTitleLabel.translatesAutoresizingMaskIntoConstraints = false
         
+        // Add subtitle label with proper constraints
         containerView.addSubview(slideSubtitleLabel)
-        slideSubtitleLabel.anchor(top: slideTitleLabel.bottomAnchor,
-                                 leading: containerView.leadingAnchor,
-                                 trailing: containerView.trailingAnchor,
-                                 paddingTop: 15,
-                                 paddingLeading: 25,
-                                 paddingTrailing: 25)
+        NSLayoutConstraint.activate([
+            slideSubtitleLabel.topAnchor.constraint(equalTo: slideTitleLabel.bottomAnchor, constant: 15),
+            slideSubtitleLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 25),
+            slideSubtitleLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -25),
+            slideSubtitleLabel.bottomAnchor.constraint(lessThanOrEqualTo: containerView.bottomAnchor, constant: -25)
+        ])
+        slideSubtitleLabel.translatesAutoresizingMaskIntoConstraints = false
     }
     
     func configure(with slide: OnboardingSlide) {

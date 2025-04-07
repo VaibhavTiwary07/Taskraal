@@ -10,8 +10,7 @@ import UIKit
 class CategoriesViewController: UIViewController {
     
     // MARK: - Properties
-    private let neumorphicBackgroundColor = UIColor(red: 240/255, green: 243/255, blue: 245/255, alpha: 1.0)
-    private let accentColor = UIColor(red: 94/255, green: 132/255, blue: 226/255, alpha: 1.0)
+    private let themeManager = ThemeManager.shared
     private var mockCategories: [(name: String, color: UIColor, taskCount: Int)] = []
     
     // MARK: - UI Elements
@@ -35,7 +34,6 @@ class CategoriesViewController: UIViewController {
         label.translatesAutoresizingMaskIntoConstraints = false
         label.text = "Categories"
         label.font = UIFont.systemFont(ofSize: 24, weight: .bold)
-        label.textColor = UIColor(red: 60/255, green: 80/255, blue: 100/255, alpha: 1.0)
         return label
     }()
     
@@ -43,14 +41,12 @@ class CategoriesViewController: UIViewController {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
         label.font = UIFont.systemFont(ofSize: 16, weight: .medium)
-        label.textColor = UIColor(red: 130/255, green: 140/255, blue: 150/255, alpha: 1.0)
         return label
     }()
     
     private let addButton: UIButton = {
         let button = UIButton()
         button.translatesAutoresizingMaskIntoConstraints = false
-        button.backgroundColor = UIColor(red: 94/255, green: 132/255, blue: 226/255, alpha: 1.0) // Accent color
         button.setImage(UIImage(systemName: "plus"), for: .normal)
         button.tintColor = .white
         button.layer.cornerRadius = 28
@@ -65,16 +61,28 @@ class CategoriesViewController: UIViewController {
         setupTableView()
         setupAddButton()
         createMockData()
+        
+        // Listen for theme changes
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleThemeChanged),
+            name: NSNotification.Name("AppThemeChanged"),
+            object: nil
+        )
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
     
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        applyNeumorphicStyles()
+        applyThemeAndStyles()
     }
     
     // MARK: - Setup
     private func setupView() {
-        view.backgroundColor = neumorphicBackgroundColor
+        view.backgroundColor = themeManager.backgroundColor
         title = "Categories"
         navigationController?.navigationBar.prefersLargeTitles = false
         navigationController?.navigationBar.isTranslucent = true
@@ -104,6 +112,10 @@ class CategoriesViewController: UIViewController {
             top: headerView.topAnchor,
             trailing: headerView.trailingAnchor
         )
+        
+        // Set text colors
+        headerLabel.textColor = themeManager.textColor
+        categoryCountLabel.textColor = themeManager.secondaryTextColor
     }
     
     private func setupTableView() {
@@ -120,6 +132,7 @@ class CategoriesViewController: UIViewController {
         tableView.delegate = self
         tableView.dataSource = self
         tableView.rowHeight = 90
+        tableView.backgroundColor = themeManager.backgroundColor
     }
     
     private func setupAddButton() {
@@ -134,8 +147,17 @@ class CategoriesViewController: UIViewController {
         addButton.addTarget(self, action: #selector(addCategoryTapped), for: .touchUpInside)
     }
     
-    private func applyNeumorphicStyles() {
+    private func applyThemeAndStyles() {
+        // Update view colors
+        view.backgroundColor = themeManager.backgroundColor
+        tableView.backgroundColor = themeManager.backgroundColor
+        
+        // Update text colors
+        headerLabel.textColor = themeManager.textColor
+        categoryCountLabel.textColor = themeManager.secondaryTextColor
+        
         // Apply neumorphic effect to the add button
+        addButton.backgroundColor = themeManager.currentThemeColor
         addButton.layer.shadowColor = UIColor.black.cgColor
         addButton.layer.shadowOffset = CGSize(width: 4, height: 4)
         addButton.layer.shadowOpacity = 0.3
@@ -164,6 +186,11 @@ class CategoriesViewController: UIViewController {
         
         // Add new inner glow
         addButton.layer.insertSublayer(innerGlow, at: 0)
+    }
+    
+    @objc private func handleThemeChanged() {
+        applyThemeAndStyles()
+        tableView.reloadData()
     }
     
     // MARK: - Actions
@@ -268,7 +295,7 @@ extension CategoriesViewController: UITableViewDelegate, UITableViewDataSource {
 class CategoryCell: UITableViewCell {
     // MARK: - Constants
     static let identifier = "CategoryCell"
-    private let neumorphicBackgroundColor = UIColor(red: 240/255, green: 243/255, blue: 245/255, alpha: 1.0)
+    private let themeManager = ThemeManager.shared
     
     // MARK: - UI Elements
     private let containerView: UIView = {
@@ -288,7 +315,6 @@ class CategoryCell: UITableViewCell {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
         label.font = UIFont.systemFont(ofSize: 18, weight: .semibold)
-        label.textColor = UIColor(red: 60/255, green: 80/255, blue: 100/255, alpha: 1.0)
         return label
     }()
     
@@ -296,7 +322,6 @@ class CategoryCell: UITableViewCell {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
         label.font = UIFont.systemFont(ofSize: 14)
-        label.textColor = UIColor(red: 130/255, green: 140/255, blue: 150/255, alpha: 1.0)
         return label
     }()
     
@@ -304,7 +329,6 @@ class CategoryCell: UITableViewCell {
         let imageView = UIImageView()
         imageView.translatesAutoresizingMaskIntoConstraints = false
         imageView.image = UIImage(systemName: "chevron.right")
-        imageView.tintColor = UIColor(red: 130/255, green: 140/255, blue: 150/255, alpha: 0.7)
         imageView.contentMode = .scaleAspectFit
         return imageView
     }()
@@ -313,15 +337,33 @@ class CategoryCell: UITableViewCell {
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
         setupCell()
+        
+        // Listen for theme changes
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleThemeChanged),
+            name: NSNotification.Name("AppThemeChanged"),
+            object: nil
+        )
     }
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+    
     override func layoutSubviews() {
         super.layoutSubviews()
-        applyNeumorphicStyles()
+        applyThemeAndStyles()
+    }
+    
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        // Ensure styling is reset for reused cells
+        applyThemeAndStyles()
     }
     
     // MARK: - Setup
@@ -382,12 +424,23 @@ class CategoryCell: UITableViewCell {
         disclosureIcon.centerY(in: containerView)
     }
     
-    private func applyNeumorphicStyles() {
-        // Apply neumorphic effect to container
-        containerView.addNeumorphicEffect(
-            cornerRadius: 16,
-            backgroundColor: neumorphicBackgroundColor
-        )
+    private func applyThemeAndStyles() {
+        // Apply neumorphic effect to container with white background
+        if containerView.bounds.width > 0 && containerView.bounds.height > 0 {
+            containerView.addNeumorphicEffect(
+                cornerRadius: 16,
+                backgroundColor: themeManager.backgroundColor
+            )
+        }
+        
+        // Update text colors
+        nameLabel.textColor = themeManager.textColor
+        taskCountLabel.textColor = themeManager.secondaryTextColor
+        disclosureIcon.tintColor = themeManager.secondaryTextColor
+    }
+    
+    @objc private func handleThemeChanged() {
+        applyThemeAndStyles()
     }
     
     // MARK: - Configure
@@ -395,5 +448,10 @@ class CategoryCell: UITableViewCell {
         nameLabel.text = name
         colorIndicator.backgroundColor = color
         taskCountLabel.text = "\(taskCount) tasks"
+        
+        // Apply styling after layout is complete
+        DispatchQueue.main.async {
+            self.applyThemeAndStyles() 
+        }
     }
 }

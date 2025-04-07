@@ -24,8 +24,7 @@ class DatePickerViewController: UIViewController {
     // MARK: - Properties
     weak var delegate: DatePickerViewControllerDelegate?
     var initialDate: Date = Date()
-    private let neumorphicBackgroundColor = UIColor(red: 240/255, green: 243/255, blue: 245/255, alpha: 1.0)
-    private let accentColor = UIColor(red: 94/255, green: 132/255, blue: 226/255, alpha: 1.0)
+    private let themeManager = ThemeManager.shared
     
     // MARK: - UI Elements
     private let datePicker: UIDatePicker = {
@@ -36,7 +35,6 @@ class DatePickerViewController: UIViewController {
             picker.preferredDatePickerStyle = .inline
         }
         picker.minimumDate = Date()
-        picker.tintColor = UIColor(red: 94/255, green: 132/255, blue: 226/255, alpha: 1.0)
         return picker
     }()
     
@@ -52,16 +50,43 @@ class DatePickerViewController: UIViewController {
         setupView()
         setupDatePicker()
         setupNavigationBar()
+        
+        // Apply styles immediately for smoother appearance
+        applyThemeAndStyles()
+        
+        // Listen for theme changes
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleThemeChanged),
+            name: NSNotification.Name("AppThemeChanged"),
+            object: nil
+        )
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        
+        // Pre-configure date picker with the correct date
+        datePicker.date = initialDate
+        
+        // Ensure smooth appearance by applying styles again
+        DispatchQueue.main.async {
+            self.applyThemeAndStyles()
+        }
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
     
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        applyNeumorphicStyles()
+        applyThemeAndStyles()
     }
     
     // MARK: - Setup
     private func setupView() {
-        view.backgroundColor = neumorphicBackgroundColor
+        view.backgroundColor = themeManager.backgroundColor
         title = "Select Due Date"
     }
     
@@ -90,42 +115,93 @@ class DatePickerViewController: UIViewController {
         )
         
         datePicker.date = initialDate
+        datePicker.tintColor = themeManager.currentThemeColor
     }
     
     private func setupNavigationBar() {
-        navigationItem.leftBarButtonItem = UIBarButtonItem(
+        // Create pre-configured buttons for better performance
+        let cancelButton = UIBarButtonItem(
             barButtonSystemItem: .cancel,
             target: self,
             action: #selector(cancelButtonTapped)
         )
+        cancelButton.tintColor = themeManager.currentThemeColor
+        navigationItem.leftBarButtonItem = cancelButton
         
-        navigationItem.rightBarButtonItem = UIBarButtonItem(
+        let doneButton = UIBarButtonItem(
             barButtonSystemItem: .done,
             target: self,
             action: #selector(doneButtonTapped)
         )
+        doneButton.tintColor = themeManager.currentThemeColor
+        doneButton.style = .done
+        navigationItem.rightBarButtonItem = doneButton
         
         // Configure navigation bar appearance
-        navigationController?.navigationBar.tintColor = accentColor
-        navigationController?.navigationBar.titleTextAttributes = [
-            NSAttributedString.Key.foregroundColor: UIColor(red: 60/255, green: 80/255, blue: 100/255, alpha: 1.0)
+        let appearance = navigationController?.navigationBar
+        appearance?.tintColor = themeManager.currentThemeColor
+        appearance?.titleTextAttributes = [
+            NSAttributedString.Key.foregroundColor: themeManager.textColor
         ]
+        
+        // Make navigation bar opaque for better performance
+        appearance?.isTranslucent = false
+        appearance?.backgroundColor = themeManager.backgroundColor
     }
     
-    private func applyNeumorphicStyles() {
-        // Apply neumorphic effect to container view
-        containerView.addNeumorphicEffect(
-            cornerRadius: 20,
-            backgroundColor: neumorphicBackgroundColor
-        )
+    private func applyThemeAndStyles() {
+        // Update colors for dark mode, batching UI updates
+        UIView.performWithoutAnimation {
+            view.backgroundColor = themeManager.backgroundColor
+            
+            // Apply simplified neumorphic effect to container view
+            containerView.backgroundColor = themeManager.backgroundColor
+            if containerView.bounds.width > 0 && containerView.bounds.height > 0 {
+                containerView.addNeumorphicEffect(
+                    cornerRadius: 20,
+                    backgroundColor: themeManager.backgroundColor
+                )
+            }
+            
+            // Update datePicker appearance
+            datePicker.tintColor = themeManager.currentThemeColor
+            if #available(iOS 14.0, *) {
+                datePicker.backgroundColor = themeManager.backgroundColor
+            }
+            
+            // Update navigation bar
+            navigationController?.navigationBar.tintColor = themeManager.currentThemeColor
+            navigationController?.navigationBar.backgroundColor = themeManager.backgroundColor
+            navigationController?.navigationBar.titleTextAttributes = [
+                NSAttributedString.Key.foregroundColor: themeManager.textColor
+            ]
+        }
+    }
+    
+    @objc private func handleThemeChanged() {
+        // Apply theme changes in a batch for better performance
+        UIView.animate(withDuration: 0.3) {
+            self.applyThemeAndStyles()
+        }
     }
     
     // MARK: - Actions
     @objc private func cancelButtonTapped() {
+        // Add a subtle haptic feedback
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.prepare()
+        generator.impactOccurred()
+        
         dismiss(animated: true)
     }
     
     @objc private func doneButtonTapped() {
+        // Add a subtle haptic feedback
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.prepare()
+        generator.impactOccurred()
+        
+        // Call delegate with current date
         delegate?.didSelectDate(datePicker.date)
         dismiss(animated: true)
     }

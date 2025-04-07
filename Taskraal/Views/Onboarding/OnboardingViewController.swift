@@ -1,21 +1,8 @@
 import UIKit
 
 class OnboardingViewController: UIViewController, UICollectionViewDelegate, UICollectionViewDataSource {
-    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return slides.count
-    }
-
-    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: OnboardingCollectionViewCell.identifier, for: indexPath) as? OnboardingCollectionViewCell else {
-            return UICollectionViewCell()
-        }
-        
-        cell.configure(with: slides[indexPath.row])
-        return cell
-    }
-    
-    
     // MARK: - Properties
+    private let themeManager = ThemeManager.shared
     private var slides: [OnboardingSlide] = []
     private var currentPage = 0 {
         didSet {
@@ -31,13 +18,13 @@ class OnboardingViewController: UIViewController, UICollectionViewDelegate, UICo
     // MARK: - UI Components
     private let backgroundView: UIView = {
         let view = UIView()
-        view.backgroundColor = UIColor(red: 240/255, green: 243/255, blue: 245/255, alpha: 1) // Light grayish background
+        view.backgroundColor = UIColor.white // Pure white background
         return view
     }()
     
     private let contentContainer: UIView = {
         let view = UIView()
-        view.backgroundColor = UIColor(red: 240/255, green: 243/255, blue: 245/255, alpha: 1)
+        view.backgroundColor = UIColor.white // Pure white background
         view.layer.cornerRadius = 20
         return view
     }()
@@ -45,9 +32,9 @@ class OnboardingViewController: UIViewController, UICollectionViewDelegate, UICo
     private let skipButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("Skip", for: .normal)
-        button.setTitleColor(UIColor(red: 100/255, green: 120/255, blue: 140/255, alpha: 1), for: .normal)
+        button.setTitleColor(UIColor(red: 94/255, green: 132/255, blue: 226/255, alpha: 1.0), for: .normal) // Blue accent
         button.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .medium)
-        button.backgroundColor = UIColor(red: 240/255, green: 243/255, blue: 245/255, alpha: 1)
+        button.backgroundColor = UIColor.white // Pure white background
         button.layer.cornerRadius = 15
         return button
     }()
@@ -66,8 +53,8 @@ class OnboardingViewController: UIViewController, UICollectionViewDelegate, UICo
     
     private let pageControl: UIPageControl = {
         let pageControl = UIPageControl()
-        pageControl.pageIndicatorTintColor = UIColor(red: 180/255, green: 190/255, blue: 200/255, alpha: 1)
-        pageControl.currentPageIndicatorTintColor = UIColor(red: 70/255, green: 100/255, blue: 130/255, alpha: 1)
+        pageControl.pageIndicatorTintColor = UIColor(red: 200/255, green: 210/255, blue: 220/255, alpha: 1.0) // Light gray
+        pageControl.currentPageIndicatorTintColor = UIColor(red: 94/255, green: 132/255, blue: 226/255, alpha: 1.0) // Blue accent
         pageControl.isUserInteractionEnabled = false
         return pageControl
     }()
@@ -75,9 +62,9 @@ class OnboardingViewController: UIViewController, UICollectionViewDelegate, UICo
     private let nextButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("Next", for: .normal)
-        button.setTitleColor(UIColor(red: 70/255, green: 90/255, blue: 110/255, alpha: 1), for: .normal)
+        button.setTitleColor(UIColor.white, for: .normal) // White text
         button.titleLabel?.font = UIFont.boldSystemFont(ofSize: 18)
-        button.backgroundColor = UIColor(red: 240/255, green: 243/255, blue: 245/255, alpha: 1)
+        button.backgroundColor = UIColor(red: 94/255, green: 132/255, blue: 226/255, alpha: 1.0) // Blue accent
         button.layer.cornerRadius = 15
         return button
     }()
@@ -96,12 +83,31 @@ class OnboardingViewController: UIViewController, UICollectionViewDelegate, UICo
         collectionView.collectionViewLayout.invalidateLayout()
         
         // Apply neumorphic effects after layout
-        contentContainer.addNeumorphicEffect(cornerRadius: 20)
-        nextButton.addNeumorphicEffect(cornerRadius: 15)
-        skipButton.addNeumorphicEffect(cornerRadius: 15)
+        contentContainer.addNeumorphicEffect(cornerRadius: 20, backgroundColor: UIColor.white)
+        skipButton.addNeumorphicEffect(cornerRadius: 15, backgroundColor: UIColor.white)
+        
+        // Next button doesn't need a neumorphic effect since it's colored
+        nextButton.layer.shadowColor = UIColor.black.cgColor
+        nextButton.layer.shadowOffset = CGSize(width: 0, height: 2)
+        nextButton.layer.shadowOpacity = 0.2
+        nextButton.layer.shadowRadius = 4
         
         // Add inset effect to collection view container
-        collectionView.superview?.addInsetNeumorphicEffect(cornerRadius: 15)
+        collectionView.superview?.addInsetNeumorphicEffect(cornerRadius: 15, backgroundColor: UIColor.white)
+    }
+    
+    // Collection view methods
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        return slides.count
+    }
+
+    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: OnboardingCollectionViewCell.identifier, for: indexPath) as? OnboardingCollectionViewCell else {
+            return UICollectionViewCell()
+        }
+        
+        cell.configure(with: slides[indexPath.row])
+        return cell
     }
     
     // MARK: - Setup
@@ -126,7 +132,7 @@ class OnboardingViewController: UIViewController, UICollectionViewDelegate, UICo
     }
     
     private func setupUI() {
-        view.backgroundColor = UIColor(red: 240/255, green: 243/255, blue: 245/255, alpha: 1)
+        view.backgroundColor = UIColor.white // Pure white background
         
         view.addSubview(backgroundView)
         backgroundView.anchor(top: view.topAnchor, leading: view.leadingAnchor, bottom: view.bottomAnchor, trailing: view.trailingAnchor)
