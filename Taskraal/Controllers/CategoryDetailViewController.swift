@@ -116,7 +116,7 @@ class CategoryDetailViewController: UIViewController {
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleThemeChanged),
-            name: NSNotification.Name("AppThemeChanged"),
+            name: ThemeManager.themeChangedNotification,
             object: nil
         )
     }

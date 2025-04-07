@@ -124,7 +124,7 @@ class TasksViewController: UIViewController {
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleThemeChanged),
-            name: NSNotification.Name("AppThemeChanged"),
+            name: ThemeManager.themeChangedNotification,
             object: nil
         )
     }
@@ -312,6 +312,14 @@ class TasksViewController: UIViewController {
             name: NSNotification.Name("TaskDataChanged"),
             object: nil
         )
+        
+        // Use ThemeManager's notification name constant
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleThemeChanged),
+            name: ThemeManager.themeChangedNotification,
+            object: nil
+        )
     }
     
     private func applyThemeAndStyles() {
@@ -351,58 +359,57 @@ class TasksViewController: UIViewController {
     }
     
     @objc private func handleThemeChanged() {
-        // Update UI elements without forcing immediate layout
+        // Use ThemeManager to update navigation bar
+        themeManager.applyThemeToNavigationBar(navigationController)
+        
+        // Update basic colors right away
         view.backgroundColor = themeManager.backgroundColor
         tableView.backgroundColor = themeManager.backgroundColor
-        
-        // Update main container with proper background color
         mainContainerView.backgroundColor = themeManager.containerBackgroundColor
-        
-        // Clean up any existing neumorphic effects
-        mainContainerView.subviews.forEach { subview in
-            if subview.tag == 1001 || subview.tag == 1002 {
-                subview.removeFromSuperview()
-            }
-        }
-        
-        // Apply neumorphic effect only if view is visible
-        if mainContainerView.bounds.width > 0 && mainContainerView.bounds.height > 0 {
-            mainContainerView.addNeumorphicEffect(
-                cornerRadius: 25,
-                backgroundColor: themeManager.containerBackgroundColor
-            )
-        }
         
         // Update text elements
         headerLabel.textColor = themeManager.textColor
         taskCountLabel.textColor = themeManager.secondaryTextColor
         searchIconView.tintColor = themeManager.secondaryTextColor
         searchTextField.textColor = themeManager.textColor
+        searchTextField.attributedPlaceholder = NSAttributedString(
+            string: "Search tasks...",
+            attributes: [NSAttributedString.Key.foregroundColor: themeManager.secondaryTextColor]
+        )
         
         // Update empty state
         emptyStateImageView.tintColor = themeManager.secondaryTextColor.withAlphaComponent(0.5)
         emptyStateLabel.textColor = themeManager.secondaryTextColor
         
-        // Update add button with minimal redraws
-        updateAddButtonAppearance()
+        // Update add button
+        addButton.backgroundColor = themeManager.currentThemeColor
         
-        // Important: Force a complete reload of the table view
-        // This is crucial for updating cell colors when theme changes
-        UIView.performWithoutAnimation {
-            tableView.reloadData()
-            
-            // Ensure visible cells are properly updated
-            for cell in tableView.visibleCells {
-                if let taskCell = cell as? TaskCell {
-                    taskCell.contentView.setNeedsLayout()
-                    taskCell.contentView.layoutIfNeeded()
-                }
+        // Clean up neumorphic effects before reapplying
+        mainContainerView.subviews.forEach { subview in
+            if subview.tag == 1001 || subview.tag == 1002 {
+                subview.removeFromSuperview()
             }
         }
         
-        // Force layout updates
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
+        // Apply neumorphic effect
+        if mainContainerView.bounds.width > 0 {
+            mainContainerView.addNeumorphicEffect(
+                cornerRadius: 25,
+                backgroundColor: themeManager.containerBackgroundColor
+            )
+        }
+        
+        // Force a complete reload of the table view
+        tableView.reloadData()
+        
+        // Ensure visible cells are properly updated
+        for cell in tableView.visibleCells {
+            if let taskCell = cell as? TaskCell {
+                // Force each visible cell to refresh fully
+                taskCell.setNeedsLayout()
+                taskCell.layoutIfNeeded()
+            }
+        }
     }
     
     private func updateAddButtonAppearance() {
@@ -412,7 +419,7 @@ class TasksViewController: UIViewController {
         // Remove existing gradient layers
         addButton.layer.sublayers?.removeAll(where: { $0 is CAGradientLayer })
         
-        // Apply inner highlight to add button (simplified)
+        // Apply inner highlight to add button
         let innerGlow = CAGradientLayer()
         innerGlow.frame = addButton.bounds
         innerGlow.cornerRadius = 28

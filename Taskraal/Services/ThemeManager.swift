@@ -19,6 +19,9 @@ class ThemeManager {
     private let lightModeAccentColor = UIColor(red: 94/255, green: 132/255, blue: 226/255, alpha: 1.0) // Blue
     private let darkModeAccentColor = UIColor(red: 76/255, green: 217/255, blue: 100/255, alpha: 1.0) // Green
     
+    // Notification name for theme changes
+    static let themeChangedNotification = NSNotification.Name("AppThemeChanged")
+    
     // MARK: - Initialization
     private init() {
         // Set up default dark mode setting if not already set
@@ -85,7 +88,7 @@ class ThemeManager {
     }
     
     private func notifyThemeChanged() {
-        NotificationCenter.default.post(name: NSNotification.Name("AppThemeChanged"), object: nil)
+        NotificationCenter.default.post(name: ThemeManager.themeChangedNotification, object: nil)
     }
     
     // MARK: - Helpers
@@ -130,7 +133,7 @@ class ThemeManager {
     func applyTheme(to view: UIView) {
         // Handle different view types
         if let button = view as? UIButton {
-            if button.backgroundColor == nil {
+            if button.backgroundColor == nil || button.backgroundColor == .clear {
                 button.backgroundColor = backgroundColor
             }
             button.setTitleColor(textColor, for: .normal)
@@ -138,10 +141,14 @@ class ThemeManager {
             label.textColor = textColor
         } else if let textField = view as? UITextField {
             textField.textColor = textColor
-            textField.backgroundColor = backgroundColor
+            if textField.backgroundColor == nil || textField.backgroundColor == .clear {
+                textField.backgroundColor = backgroundColor
+            }
         } else if let textView = view as? UITextView {
             textView.textColor = textColor
-            textView.backgroundColor = backgroundColor
+            if textView.backgroundColor == nil || textView.backgroundColor == .clear {
+                textView.backgroundColor = backgroundColor
+            }
         } else if let tableView = view as? UITableView {
             tableView.backgroundColor = backgroundColor
             tableView.separatorColor = secondaryTextColor.withAlphaComponent(0.3)
@@ -150,10 +157,81 @@ class ThemeManager {
             segmentedControl.selectedSegmentTintColor = currentThemeColor
         } else if let switchControl = view as? UISwitch {
             switchControl.onTintColor = currentThemeColor
+        } else if let imageView = view as? UIImageView {
+            if imageView.tintColor != nil {
+                imageView.tintColor = textColor
+            }
         }
         
         // Apply to all subviews
         view.subviews.forEach { applyTheme(to: $0) }
+    }
+    
+    // Refresh colors for all views in the app
+    func refreshAllColors() {
+        // Get all windows to refresh
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap { $0.windows }
+            .forEach { window in
+                // Refresh all views in window hierarchy
+                applyTheme(to: window)
+                
+                // Force layout update
+                window.setNeedsLayout()
+                window.layoutIfNeeded()
+            }
+    }
+    
+    // Update navigation bar appearance for a view controller
+    func applyThemeToNavigationBar(_ navigationController: UINavigationController?) {
+        guard let navigationBar = navigationController?.navigationBar else { return }
+        
+        navigationBar.tintColor = currentThemeColor
+        navigationBar.barTintColor = backgroundColor
+        
+        navigationBar.titleTextAttributes = [
+            NSAttributedString.Key.foregroundColor: textColor
+        ]
+        
+        if #available(iOS 15.0, *) {
+            let appearance = UINavigationBarAppearance()
+            appearance.configureWithOpaqueBackground()
+            appearance.backgroundColor = backgroundColor
+            appearance.titleTextAttributes = [
+                NSAttributedString.Key.foregroundColor: textColor
+            ]
+            appearance.shadowColor = .clear
+            
+            navigationBar.standardAppearance = appearance
+            navigationBar.scrollEdgeAppearance = appearance
+        }
+    }
+    
+    // Update tab bar appearance
+    func applyThemeToTabBar(_ tabBar: UITabBar?) {
+        guard let tabBar = tabBar else { return }
+        
+        tabBar.tintColor = currentThemeColor
+        tabBar.unselectedItemTintColor = secondaryTextColor
+        
+        if #available(iOS 15.0, *) {
+            let appearance = UITabBarAppearance()
+            appearance.configureWithTransparentBackground()
+            
+            appearance.stackedLayoutAppearance.selected.iconColor = currentThemeColor
+            appearance.stackedLayoutAppearance.normal.iconColor = secondaryTextColor
+            
+            appearance.stackedLayoutAppearance.selected.titleTextAttributes = [
+                .foregroundColor: currentThemeColor
+            ]
+            appearance.stackedLayoutAppearance.normal.titleTextAttributes = [
+                .foregroundColor: secondaryTextColor
+            ]
+            
+            tabBar.standardAppearance = appearance
+            tabBar.scrollEdgeAppearance = appearance
+        }
     }
 }
 

@@ -52,12 +52,7 @@ class SettingsViewController: UIViewController {
         loadSettings()
         
         // Listen for theme changes
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleThemeChanged),
-            name: NSNotification.Name("AppThemeChanged"),
-            object: nil
-        )
+        setupNotificationObservers()
     }
     
     override func viewDidLayoutSubviews() {
@@ -73,9 +68,9 @@ class SettingsViewController: UIViewController {
     private func setupView() {
         view.backgroundColor = themeManager.backgroundColor
         title = "Settings"
-        navigationController?.navigationBar.prefersLargeTitles = false
-        navigationController?.navigationBar.isTranslucent = true
-        navigationItem.largeTitleDisplayMode = .never
+        
+        // Use ThemeManager to configure navigation bar
+        themeManager.applyThemeToNavigationBar(navigationController)
     }
     
     private func setupHeader() {
@@ -226,13 +221,29 @@ class SettingsViewController: UIViewController {
         present(alert, animated: true)
     }
     
+    private func setupNotificationObservers() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleThemeChanged),
+            name: ThemeManager.themeChangedNotification,
+            object: nil
+        )
+    }
+    
     @objc private func handleThemeChanged() {
-        // Update view colors
+        // Update view with ThemeManager
         view.backgroundColor = themeManager.backgroundColor
         headerLabel.textColor = themeManager.textColor
         
+        // Apply navigation bar theme
+        themeManager.applyThemeToNavigationBar(navigationController)
+        
         // Reload table to update cells
         tableView.reloadData()
+        
+        // Force layout update
+        view.setNeedsLayout()
+        view.layoutIfNeeded()
     }
 }
 
@@ -368,17 +379,13 @@ class SettingToggleCell: UITableViewCell {
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleThemeChanged),
-            name: NSNotification.Name("AppThemeChanged"),
+            name: ThemeManager.themeChangedNotification,
             object: nil
         )
     }
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
-    }
-    
-    deinit {
-        NotificationCenter.default.removeObserver(self)
     }
     
     override func layoutSubviews() {
@@ -437,14 +444,18 @@ class SettingToggleCell: UITableViewCell {
         toggleCallback?(sender.isOn)
     }
     
-    @objc private func handleThemeChanged() {
-        applyThemeAndStyles()
-    }
-    
     func configure(with title: String, isOn: Bool, callback: @escaping (Bool) -> Void) {
         titleLabel.text = title
         toggleSwitch.isOn = isOn
         toggleCallback = callback
+        applyThemeAndStyles()
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+    
+    @objc private func handleThemeChanged() {
         applyThemeAndStyles()
     }
 }
@@ -602,17 +613,13 @@ class SettingInfoCell: UITableViewCell {
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleThemeChanged),
-            name: NSNotification.Name("AppThemeChanged"),
+            name: ThemeManager.themeChangedNotification,
             object: nil
         )
     }
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
-    }
-    
-    deinit {
-        NotificationCenter.default.removeObserver(self)
     }
     
     override func layoutSubviews() {
@@ -664,12 +671,16 @@ class SettingInfoCell: UITableViewCell {
         infoIcon.tintColor = themeManager.secondaryTextColor
     }
     
-    @objc private func handleThemeChanged() {
+    func configure(with title: String) {
+        titleLabel.text = title
         applyThemeAndStyles()
     }
     
-    func configure(with title: String) {
-        titleLabel.text = title
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+    
+    @objc private func handleThemeChanged() {
         applyThemeAndStyles()
     }
 }

@@ -10,14 +10,8 @@ import UIKit
 class MainTabBarController: UITabBarController {
     
     // MARK: - Properties
-    private var neumorphicBackgroundColor: UIColor {
-        return ThemeManager.shared.backgroundColor
-    }
-    private var accentColor: UIColor {
-        return ThemeManager.shared.currentThemeColor
-    }
-    private let unselectedColor = UIColor(red: 160/255, green: 170/255, blue: 180/255, alpha: 1.0)
     private let themeManager = ThemeManager.shared
+    private let unselectedColor = UIColor(red: 160/255, green: 170/255, blue: 180/255, alpha: 1.0)
     
     // MARK: - Lifecycle
     override func viewDidLoad() {
@@ -43,9 +37,9 @@ class MainTabBarController: UITabBarController {
         let settingsVC = SettingsViewController()
         
         // Configure each view controller
-        configureController(tasksVC, title: "Tasks", navBarColor: neumorphicBackgroundColor)
-        configureController(categoriesVC, title: "Categories", navBarColor: neumorphicBackgroundColor)
-        configureController(settingsVC, title: "Settings", navBarColor: neumorphicBackgroundColor)
+        configureController(tasksVC, title: "Tasks")
+        configureController(categoriesVC, title: "Categories")
+        configureController(settingsVC, title: "Settings")
         
         // Create navigation controllers
         let tasksNavController = createNavController(for: tasksVC, title: "Tasks",
@@ -58,31 +52,17 @@ class MainTabBarController: UITabBarController {
         setViewControllers([tasksNavController, categoriesNavController, settingsNavController], animated: true)
     }
     
-    private func configureController(_ viewController: UIViewController, title: String, navBarColor: UIColor) {
+    private func configureController(_ viewController: UIViewController, title: String) {
         viewController.title = title
-        viewController.view.backgroundColor = neumorphicBackgroundColor
+        viewController.view.backgroundColor = themeManager.backgroundColor
     }
     
     private func createNavController(for rootViewController: UIViewController, title: String,
                                     image: String, selectedImage: String) -> UINavigationController {
         let navController = UINavigationController(rootViewController: rootViewController)
         
-        // Configure navigation bar appearance
-        if #available(iOS 15.0, *) {
-            let appearance = UINavigationBarAppearance()
-            appearance.configureWithOpaqueBackground()
-            appearance.backgroundColor = themeManager.backgroundColor
-            appearance.titleTextAttributes = [.foregroundColor: UIColor(red: 70/255, green: 90/255, blue: 110/255, alpha: 1.0)]
-            appearance.shadowColor = .clear // Remove navigation bar shadow
-            
-            navController.navigationBar.standardAppearance = appearance
-            navController.navigationBar.scrollEdgeAppearance = appearance
-        } else {
-            navController.navigationBar.barTintColor = themeManager.backgroundColor
-            navController.navigationBar.tintColor = themeManager.currentThemeColor
-            navController.navigationBar.titleTextAttributes = [.foregroundColor: UIColor(red: 70/255, green: 90/255, blue: 110/255, alpha: 1.0)]
-            navController.navigationBar.shadowImage = UIImage() // Remove navigation bar shadow
-        }
+        // Configure navigation bar using ThemeManager
+        themeManager.applyThemeToNavigationBar(navController)
         
         // Configure tab bar item
         navController.tabBarItem = UITabBarItem(title: title,
@@ -93,31 +73,13 @@ class MainTabBarController: UITabBarController {
     }
     
     private func customizeTabBar() {
-        // Set tab bar's background color
+        // Use ThemeManager to apply tab bar theme
+        themeManager.applyThemeToTabBar(tabBar)
+        
+        // Set tab bar's background clear for neumorphic effect
         tabBar.barTintColor = .clear
         tabBar.backgroundImage = UIImage()
         tabBar.shadowImage = UIImage()
-        
-        // Set icon colors - use direct color reference for better performance
-        tabBar.tintColor = themeManager.currentThemeColor
-        tabBar.unselectedItemTintColor = unselectedColor
-        
-        // Modern appearance for iOS 15+
-        if #available(iOS 15.0, *) {
-            let appearance = UITabBarAppearance()
-            appearance.configureWithTransparentBackground()
-            
-            // Set icon colors with direct color reference
-            appearance.stackedLayoutAppearance.selected.iconColor = themeManager.currentThemeColor
-            appearance.stackedLayoutAppearance.normal.iconColor = unselectedColor
-            
-            // Set text colors with direct color reference
-            appearance.stackedLayoutAppearance.selected.titleTextAttributes = [.foregroundColor: themeManager.currentThemeColor]
-            appearance.stackedLayoutAppearance.normal.titleTextAttributes = [.foregroundColor: unselectedColor]
-            
-            tabBar.standardAppearance = appearance
-            tabBar.scrollEdgeAppearance = appearance
-        }
     }
     
     private func applyNeumorphicEffect() {
@@ -145,9 +107,9 @@ class MainTabBarController: UITabBarController {
         container.layer.cornerRadius = 25
         container.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner] // Top corners only
         
-        // Create subtle inner shadow effect - adapted for dark mode but simplified
+        // Create subtle inner shadow effect - adapted for dark mode
         if themeManager.isDarkModeEnabled {
-            // Darker shadow for dark mode - simplified
+            // Darker shadow for dark mode
             container.layer.shadowColor = UIColor.black.cgColor
             container.layer.shadowOffset = CGSize(width: 0, height: 2)
             container.layer.shadowOpacity = 0.7
@@ -160,20 +122,20 @@ class MainTabBarController: UITabBarController {
             innerShadow.cornerRadius = 23
             container.layer.addSublayer(innerShadow)
         } else {
-            // Light mode shadows - simplified
+            // Light mode shadows
             container.layer.shadowColor = UIColor.black.cgColor
             container.layer.shadowOffset = CGSize(width: 0, height: 2)
             container.layer.shadowOpacity = 0.08
             container.layer.shadowRadius = 6
             
-            // Create light highlight at the top - use a simpler approach 
+            // Create light highlight at the top
             let topHighlight = UIView()
             topHighlight.frame = CGRect(x: 0, y: 0, width: container.frame.width, height: 1)
             topHighlight.backgroundColor = UIColor.white.withAlphaComponent(0.5)
             container.addSubview(topHighlight)
         }
         
-        // Create a subtle line above the tab bar for separation - simplified
+        // Create a subtle line above the tab bar for separation
         let separatorView = UIView()
         separatorView.frame = CGRect(x: 25,
                                     y: 12,
@@ -181,11 +143,11 @@ class MainTabBarController: UITabBarController {
                                     height: 4)
         separatorView.backgroundColor = themeManager.isDarkModeEnabled ? 
             UIColor.darkGray.withAlphaComponent(0.5) : 
-            unselectedColor.withAlphaComponent(0.2)
+            themeManager.secondaryTextColor.withAlphaComponent(0.2)
         separatorView.layer.cornerRadius = 2
         container.addSubview(separatorView)
         
-        // Add small indicator lights for selected tab - simplified
+        // Add indicator lights for selected tab
         for i in 0...2 {
             let indicatorLight = UIView()
             indicatorLight.frame = CGRect(x: (container.frame.width / 3) * CGFloat(i) + (container.frame.width / 6) - 3,
@@ -230,53 +192,23 @@ class MainTabBarController: UITabBarController {
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleThemeChanged),
-            name: NSNotification.Name("AppThemeChanged"),
+            name: ThemeManager.themeChangedNotification,
             object: nil
         )
     }
     
     @objc private func handleThemeChanged() {
-        // Update the tab bar tint immediately
-        tabBar.tintColor = themeManager.currentThemeColor
+        // Apply theme using ThemeManager
+        themeManager.applyThemeToTabBar(tabBar)
         
-        // Force the current tab item to refresh its tint
-        if let items = tabBar.items, selectedIndex < items.count {
-            let currentItem = items[selectedIndex]
-            currentItem.setTitleTextAttributes([.foregroundColor: themeManager.currentThemeColor], for: .selected)
-        }
-        
-        // Update iOS 15+ appearance if needed
-        if #available(iOS 15.0, *) {
-            let appearance = UITabBarAppearance()
-            appearance.configureWithTransparentBackground()
-            
-            appearance.stackedLayoutAppearance.selected.iconColor = themeManager.currentThemeColor
-            appearance.stackedLayoutAppearance.normal.iconColor = unselectedColor
-            
-            appearance.stackedLayoutAppearance.selected.titleTextAttributes = [.foregroundColor: themeManager.currentThemeColor]
-            appearance.stackedLayoutAppearance.normal.titleTextAttributes = [.foregroundColor: unselectedColor]
-            
-            tabBar.standardAppearance = appearance
-            tabBar.scrollEdgeAppearance = appearance
-        }
-        
-        // Update the navigation bar tint colors for each tab
-        viewControllers?.forEach { navController in
-            if let nav = navController as? UINavigationController {
-                nav.navigationBar.tintColor = themeManager.currentThemeColor
+        // Update each navigation controller
+        viewControllers?.forEach { vc in
+            if let navController = vc as? UINavigationController {
+                themeManager.applyThemeToNavigationBar(navController)
             }
         }
         
-        // Remove existing neumorphic container before creating a new one
-        if let tabBarSuperview = tabBar.superview {
-            tabBarSuperview.subviews.forEach { subview in
-                if subview.tag == 999 {
-                    subview.removeFromSuperview()
-                }
-            }
-        }
-        
-        // Reapply the neumorphic effect with the new theme
+        // Force refresh the tab bar neumorphic effect
         applyNeumorphicEffect()
     }
 }

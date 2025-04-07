@@ -182,7 +182,7 @@ class AddTaskViewController: UIViewController {
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleThemeChanged),
-            name: NSNotification.Name("AppThemeChanged"),
+            name: ThemeManager.themeChangedNotification,
             object: nil
         )
     }
@@ -474,28 +474,32 @@ class AddTaskViewController: UIViewController {
     }
     
     private func applyThemeAndStyles() {
-        // Update background color
+        // Use ThemeManager to update colors consistently
         view.backgroundColor = themeManager.backgroundColor
-        scrollView.backgroundColor = themeManager.backgroundColor
-        contentView.backgroundColor = themeManager.backgroundColor
         
-        // Update text colors
+        // Update navigation bar
+        themeManager.applyThemeToNavigationBar(navigationController)
+        
+        // Update text field colors
         titleTextField.textColor = themeManager.textColor
         titleTextField.attributedPlaceholder = NSAttributedString(
             string: titlePlaceholder,
             attributes: [NSAttributedString.Key.foregroundColor: themeManager.secondaryTextColor]
         )
         
+        // Update text view based on state
         if detailsTextView.text == detailsPlaceholder {
             detailsTextView.textColor = themeManager.secondaryTextColor
         } else {
             detailsTextView.textColor = themeManager.textColor
         }
         
+        // Update labels
         priorityLabel.textColor = themeManager.textColor
         categoryLabel.textColor = themeManager.textColor
         dateLabel.textColor = themeManager.textColor
         
+        // Update buttons based on state
         if categoryButton.title(for: .normal) == "Select category" {
             categoryButton.setTitleColor(themeManager.secondaryTextColor, for: .normal)
         } else {
@@ -508,7 +512,16 @@ class AddTaskViewController: UIViewController {
             dateButton.setTitleColor(themeManager.textColor, for: .normal)
         }
         
-        // Apply neumorphic styles with container background color
+        // Clean up existing neumorphic effects
+        [titleContainer, detailsContainer, categoryButton, dateButton].forEach { view in
+            view.subviews.forEach { subview in
+                if subview.tag == 1001 || subview.tag == 1002 {
+                    subview.removeFromSuperview()
+                }
+            }
+        }
+        
+        // Apply new neumorphic effects
         titleContainer.backgroundColor = themeManager.containerBackgroundColor
         titleContainer.addNeumorphicEffect(
             cornerRadius: 15,
@@ -521,15 +534,11 @@ class AddTaskViewController: UIViewController {
             backgroundColor: themeManager.containerBackgroundColor
         )
         
-        // Add neumorphic effect to segmented control
+        // Update segmented control
         prioritySegmentedControl.backgroundColor = themeManager.containerBackgroundColor
-        prioritySegmentedControl.layer.cornerRadius = 10
-        
-        // Use system colors for priority with transparency
         prioritySegmentedControl.setTitleTextAttributes([
             .foregroundColor: themeManager.secondaryTextColor
         ], for: .normal)
-        
         prioritySegmentedControl.setTitleTextAttributes([
             .foregroundColor: UIColor.white
         ], for: .selected)
@@ -538,7 +547,7 @@ class AddTaskViewController: UIViewController {
         let selectedPriorityColor = PriorityLevel(rawValue: Int16(prioritySegmentedControl.selectedSegmentIndex)) ?? .medium
         prioritySegmentedControl.selectedSegmentTintColor = selectedPriorityColor.color
         
-        // Apply neumorphic effect to category and date buttons with container background color
+        // Apply neumorphic effects to buttons
         categoryButton.backgroundColor = themeManager.containerBackgroundColor
         categoryButton.addNeumorphicEffect(
             cornerRadius: 15,
@@ -553,52 +562,103 @@ class AddTaskViewController: UIViewController {
         
         // Update save button
         saveButton.backgroundColor = themeManager.currentThemeColor
-        saveButton.layer.shadowColor = UIColor.black.cgColor
-        saveButton.layer.shadowOffset = CGSize(width: 4, height: 4)
-        saveButton.layer.shadowOpacity = 0.2
-        saveButton.layer.shadowRadius = 5
         
-        // Add inner highlight
-        let innerGlow = CAGradientLayer()
-        innerGlow.frame = CGRect(x: 0, y: 0, width: saveButton.bounds.width, height: saveButton.bounds.height)
-        innerGlow.cornerRadius = 25
-        innerGlow.colors = [
-            UIColor.white.withAlphaComponent(0.5).cgColor,
-            UIColor.clear.cgColor
-        ]
-        innerGlow.startPoint = CGPoint(x: 0, y: 0)
-        innerGlow.endPoint = CGPoint(x: 1, y: 1)
-        innerGlow.locations = [0.0, 0.5]
+        // Refresh gradients
+        updateSaveButtonAppearance()
+    }
+    
+    @objc private func handleThemeChanged() {
+        // Use ThemeManager to update colors consistently
+        view.backgroundColor = themeManager.backgroundColor
         
-        // Remove existing inner glow if any
-        if let sublayers = saveButton.layer.sublayers {
-            for layer in sublayers {
-                if layer is CAGradientLayer {
-                    layer.removeFromSuperlayer()
+        // Update navigation bar
+        themeManager.applyThemeToNavigationBar(navigationController)
+        
+        // Update text field colors
+        titleTextField.textColor = themeManager.textColor
+        titleTextField.attributedPlaceholder = NSAttributedString(
+            string: titlePlaceholder,
+            attributes: [NSAttributedString.Key.foregroundColor: themeManager.secondaryTextColor]
+        )
+        
+        // Update text view based on state
+        if detailsTextView.text == detailsPlaceholder {
+            detailsTextView.textColor = themeManager.secondaryTextColor
+        } else {
+            detailsTextView.textColor = themeManager.textColor
+        }
+        
+        // Update labels
+        priorityLabel.textColor = themeManager.textColor
+        categoryLabel.textColor = themeManager.textColor
+        dateLabel.textColor = themeManager.textColor
+        
+        // Update buttons based on state
+        if categoryButton.title(for: .normal) == "Select category" {
+            categoryButton.setTitleColor(themeManager.secondaryTextColor, for: .normal)
+        } else {
+            categoryButton.setTitleColor(themeManager.textColor, for: .normal)
+        }
+        
+        if dateButton.title(for: .normal) == "Set date" {
+            dateButton.setTitleColor(themeManager.secondaryTextColor, for: .normal)
+        } else {
+            dateButton.setTitleColor(themeManager.textColor, for: .normal)
+        }
+        
+        // Clean up existing neumorphic effects
+        [titleContainer, detailsContainer, categoryButton, dateButton].forEach { view in
+            view.subviews.forEach { subview in
+                if subview.tag == 1001 || subview.tag == 1002 {
+                    subview.removeFromSuperview()
                 }
             }
         }
         
-        // Add new inner glow
-        saveButton.layer.insertSublayer(innerGlow, at: 0)
+        // Apply new neumorphic effects
+        titleContainer.backgroundColor = themeManager.containerBackgroundColor
+        titleContainer.addNeumorphicEffect(
+            cornerRadius: 15,
+            backgroundColor: themeManager.containerBackgroundColor
+        )
         
-        // Update navigation bar
-        navigationController?.navigationBar.tintColor = themeManager.currentThemeColor
-        navigationController?.navigationBar.titleTextAttributes = [
-            NSAttributedString.Key.foregroundColor: themeManager.textColor,
-            NSAttributedString.Key.font: UIFont.systemFont(ofSize: 18, weight: .semibold)
-        ]
-    }
-    
-    @objc private func handleThemeChanged() {
-        applyThemeAndStyles()
+        detailsContainer.backgroundColor = themeManager.containerBackgroundColor
+        detailsContainer.addNeumorphicEffect(
+            cornerRadius: 15,
+            backgroundColor: themeManager.containerBackgroundColor
+        )
         
-        // Update navigation bar
-        setupNavigationBar()
+        // Update segmented control
+        prioritySegmentedControl.backgroundColor = themeManager.containerBackgroundColor
+        prioritySegmentedControl.setTitleTextAttributes([
+            .foregroundColor: themeManager.secondaryTextColor
+        ], for: .normal)
+        prioritySegmentedControl.setTitleTextAttributes([
+            .foregroundColor: UIColor.white
+        ], for: .selected)
         
-        // Force layout update
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
+        // Set the background color of the selected segment
+        let selectedPriorityColor = PriorityLevel(rawValue: Int16(prioritySegmentedControl.selectedSegmentIndex)) ?? .medium
+        prioritySegmentedControl.selectedSegmentTintColor = selectedPriorityColor.color
+        
+        // Apply neumorphic effects to buttons
+        categoryButton.backgroundColor = themeManager.containerBackgroundColor
+        categoryButton.addNeumorphicEffect(
+            cornerRadius: 15,
+            backgroundColor: themeManager.containerBackgroundColor
+        )
+        
+        dateButton.backgroundColor = themeManager.containerBackgroundColor
+        dateButton.addNeumorphicEffect(
+            cornerRadius: 15,
+            backgroundColor: themeManager.containerBackgroundColor
+        )
+        
+        // Update save button
+        saveButton.backgroundColor = themeManager.currentThemeColor
+        
+        // Refresh gradients
+        updateSaveButtonAppearance()
     }
     
     // MARK: - Core Data
@@ -1072,6 +1132,33 @@ class AddTaskViewController: UIViewController {
             // Focus the text field
             alert.textFields?.first?.becomeFirstResponder()
         }
+    }
+    
+    // Add this method to handle save button appearance consistently
+    private func updateSaveButtonAppearance() {
+        // Update shadows
+        saveButton.layer.shadowColor = UIColor.black.cgColor
+        saveButton.layer.shadowOffset = CGSize(width: 4, height: 4)
+        saveButton.layer.shadowOpacity = 0.2
+        saveButton.layer.shadowRadius = 5
+        
+        // Remove existing inner glow if any
+        saveButton.layer.sublayers?.removeAll(where: { $0 is CAGradientLayer })
+        
+        // Add inner highlight
+        let innerGlow = CAGradientLayer()
+        innerGlow.frame = CGRect(x: 0, y: 0, width: saveButton.bounds.width, height: saveButton.bounds.height)
+        innerGlow.cornerRadius = 25
+        innerGlow.colors = [
+            UIColor.white.withAlphaComponent(0.5).cgColor,
+            UIColor.clear.cgColor
+        ]
+        innerGlow.startPoint = CGPoint(x: 0, y: 0)
+        innerGlow.endPoint = CGPoint(x: 1, y: 1)
+        innerGlow.locations = [0.0, 0.5]
+        
+        // Add new inner glow
+        saveButton.layer.insertSublayer(innerGlow, at: 0)
     }
 }
 

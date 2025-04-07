@@ -78,7 +78,7 @@ class TaskCell: UITableViewCell {
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleThemeChanged),
-            name: NSNotification.Name("AppThemeChanged"),
+            name: ThemeManager.themeChangedNotification,
             object: nil
         )
     }
@@ -175,18 +175,18 @@ class TaskCell: UITableViewCell {
     }
     
     private func applyThemeAndStyles() {
-        // Apply text colors
-        if !isCompleted {
-            taskNameLabel.textColor = themeManager.textColor
-        }
-        categoryLabel.textColor = themeManager.secondaryTextColor
-        dueDateLabel.textColor = themeManager.secondaryTextColor
+        // Clean up existing neumorphic effects
+        cleanupNeumorphicEffects()
         
         // Set background color
         containerView.backgroundColor = themeManager.backgroundColor
         
-        // Clean up existing neumorphic effects before applying new ones
-        cleanupNeumorphicEffects()
+        // Update text colors based on state
+        categoryLabel.textColor = themeManager.secondaryTextColor
+        dueDateLabel.textColor = themeManager.secondaryTextColor
+        
+        // Update completion status (which handles taskNameLabel styling)
+        updateCheckboxState()
         
         // Apply neumorphic effects based on completion state
         if isCompleted {
@@ -206,10 +206,8 @@ class TaskCell: UITableViewCell {
         // Apply inset neumorphic effect to checkbox
         checkboxButton.addInsetNeumorphicEffect(
             cornerRadius: 12,
-            backgroundColor: themeManager.backgroundColor
+            backgroundColor: isCompleted ? themeManager.currentThemeColor : themeManager.backgroundColor
         )
-        
-        updateCheckboxState()
     }
     
     // MARK: - Action
@@ -226,49 +224,57 @@ class TaskCell: UITableViewCell {
         }) { _ in
             UIView.animate(withDuration: 0.2) {
                 self.checkboxButton.transform = .identity
-                self.applyThemeAndStyles() // Apply the correct neumorphic style after animation
+                
+                // Completely rebuild the cell appearance
+                self.cleanupNeumorphicEffects()
+                self.applyThemeAndStyles()
             }
         }
     }
     
     @objc private func handleThemeChanged() {
-        // Immediately update all colors based on the new theme
+        // Completely rebuild the cell
+        
+        // Clean up existing neumorphic effects
+        cleanupNeumorphicEffects()
+        
+        // Reset and reapply the background color
         containerView.backgroundColor = themeManager.backgroundColor
         
-        // Update text colors
-        if !isCompleted {
-            taskNameLabel.textColor = themeManager.textColor
+        // Reset checkbox appearance
+        if isCompleted {
+            checkboxButton.backgroundColor = themeManager.currentThemeColor
+            checkboxButton.tintColor = .white
         } else {
-            // Update strikethrough text with new theme color
-            let attributedString = NSAttributedString(
-                string: taskNameLabel.text ?? "",
-                attributes: [
-                    .strikethroughStyle: NSUnderlineStyle.single.rawValue,
-                    .foregroundColor: themeManager.textColor.withAlphaComponent(0.6)
-                ]
-            )
-            taskNameLabel.attributedText = attributedString
+            checkboxButton.backgroundColor = themeManager.backgroundColor
+            checkboxButton.tintColor = themeManager.textColor
         }
         
+        // Update colors for all elements
         categoryLabel.textColor = themeManager.secondaryTextColor
         dueDateLabel.textColor = themeManager.secondaryTextColor
         
-        // Update checkbox state
+        // Reapply completion state styling
+        updateCheckboxState()
+        
+        // Reapply neumorphic styling based on completion state
         if isCompleted {
-            checkboxButton.backgroundColor = themeManager.currentThemeColor
+            containerView.addInsetNeumorphicEffect(
+                cornerRadius: 16,
+                backgroundColor: themeManager.backgroundColor
+            )
         } else {
-            checkboxButton.backgroundColor = themeManager.backgroundColor
+            containerView.addNeumorphicEffect(
+                cornerRadius: 16,
+                backgroundColor: themeManager.backgroundColor
+            )
         }
         
-        // Clean up existing neumorphic effects to rebuild with new theme colors
-        cleanupNeumorphicEffects()
-        
-        // Force full redraw on next layout pass
-        setNeedsLayout()
-        layoutIfNeeded()
-        
-        // Important: Apply theme styles immediately
-        applyThemeAndStyles()
+        // Apply inset neumorphic effect to checkbox
+        checkboxButton.addInsetNeumorphicEffect(
+            cornerRadius: 12,
+            backgroundColor: isCompleted ? themeManager.currentThemeColor : themeManager.backgroundColor
+        )
     }
     
     // Helper method to clean up neumorphic effects
@@ -291,12 +297,17 @@ class TaskCell: UITableViewCell {
     }
     
     private func updateCheckboxState() {
+        // First remove all styling to start fresh
+        checkboxButton.setImage(nil, for: .normal)
+        taskNameLabel.attributedText = nil
+        
         if isCompleted {
+            // Set checkbox appearance for completed state
             checkboxButton.backgroundColor = themeManager.currentThemeColor
             checkboxButton.setImage(UIImage(systemName: "checkmark"), for: .normal)
             checkboxButton.tintColor = .white
             
-            // Strike through text
+            // Apply strikethrough with the current theme's color
             let attributedString = NSAttributedString(
                 string: taskNameLabel.text ?? "",
                 attributes: [
@@ -306,24 +317,33 @@ class TaskCell: UITableViewCell {
             )
             taskNameLabel.attributedText = attributedString
         } else {
+            // Set checkbox appearance for incomplete state
             checkboxButton.backgroundColor = themeManager.backgroundColor
             checkboxButton.setImage(nil, for: .normal)
             
-            // Remove strike through
-            taskNameLabel.attributedText = nil
-            taskNameLabel.text = taskNameLabel.text
+            // Clean text styling
+            if taskNameLabel.attributedText != nil {
+                let plainText = taskNameLabel.attributedText?.string ?? taskNameLabel.text ?? ""
+                taskNameLabel.attributedText = nil
+                taskNameLabel.text = plainText
+            }
             taskNameLabel.textColor = themeManager.textColor
         }
     }
     
     // MARK: - Configure
     func configure(with taskName: String, category: String, dueDate: Date?, priority: PriorityLevel, isCompleted: Bool = false) {
-        // Clean up any existing neumorphic effects
+        // First reset the cell to a clean state
+        self.isCompleted = false // Reset state
         cleanupNeumorphicEffects()
         
-        // Set task data
+        // Reset all text styles
+        taskNameLabel.attributedText = nil
         taskNameLabel.text = taskName
+        taskNameLabel.textColor = themeManager.textColor
+        
         categoryLabel.text = category
+        categoryLabel.textColor = themeManager.secondaryTextColor
         
         // Format date
         if let dueDate = dueDate {
@@ -331,15 +351,35 @@ class TaskCell: UITableViewCell {
         } else {
             dueDateLabel.text = "No due date"
         }
+        dueDateLabel.textColor = themeManager.secondaryTextColor
         
         // Set priority color
         priorityIndicator.backgroundColor = priority.color
         
-        // Set completion state
+        // Set container and checkbox base appearance
+        containerView.backgroundColor = themeManager.backgroundColor
+        checkboxButton.backgroundColor = themeManager.backgroundColor
+        
+        // Now set completion state which will trigger updateCheckboxState
         self.isCompleted = isCompleted
         
-        // Apply theme and styles - use setNeedsLayout instead of immediate layout
-        applyThemeAndStyles()
-        setNeedsLayout()
+        // Apply neumorphic effects based on completion state
+        if isCompleted {
+            containerView.addInsetNeumorphicEffect(
+                cornerRadius: 16,
+                backgroundColor: themeManager.backgroundColor
+            )
+        } else {
+            containerView.addNeumorphicEffect(
+                cornerRadius: 16,
+                backgroundColor: themeManager.backgroundColor
+            )
+        }
+        
+        // Apply neumorphic effect to checkbox
+        checkboxButton.addInsetNeumorphicEffect(
+            cornerRadius: 12,
+            backgroundColor: isCompleted ? themeManager.currentThemeColor : themeManager.backgroundColor
+        )
     }
 }
