@@ -184,8 +184,24 @@ class AddTaskViewController: UIViewController {
         setupTextViewDelegate()
         setupKeyboardObservers()
         
+        // Force immediate layout to ensure all views have proper frames
+        view.setNeedsLayout()
+        view.layoutIfNeeded()
+        
         // Fix scrollView issue by setting explicit content size
-        scrollView.contentSize = CGSize(width: scrollView.bounds.width, height: 1200)
+        DispatchQueue.main.async {
+            // Force frames to be set
+            self.contentView.frame = CGRect(x: 0, y: 0, width: self.scrollView.bounds.width, height: 1200)
+            self.scrollView.contentSize = CGSize(width: self.scrollView.bounds.width, height: 1200)
+            
+            // Force all subviews to layout
+            self.contentView.subviews.forEach { $0.layoutIfNeeded() }
+            
+            // Print debug info
+            print("🚀 Initial layout forced for all views")
+            print("⚙️ ContentView frame: \(self.contentView.frame)")
+            print("⚙️ ScrollView contentSize: \(self.scrollView.contentSize)")
+        }
         
         // Pre-fetch categories for smoother category selection
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
@@ -243,6 +259,16 @@ class AddTaskViewController: UIViewController {
         
         // Update all views with neumorphic effects
         view.updateNeumorphicShadowPaths()
+        
+        // Debug frame information
+        print("\n--- VIEW FRAMES DEBUG ---")
+        print("🔄 DateButton: frame=\(dateButton.frame), bounds=\(dateButton.bounds), superview=\(dateButton.superview?.description ?? "none")")
+        print("🔄 CategoryButton: frame=\(categoryButton.frame), bounds=\(categoryButton.bounds), superview=\(categoryButton.superview?.description ?? "none")")
+        print("🔄 PrioritySegment: frame=\(prioritySegmentedControl.frame), bounds=\(prioritySegmentedControl.bounds)")
+        print("🔄 SaveButton: frame=\(saveButton.frame), bounds=\(saveButton.bounds)")
+        print("🔄 ContentView: frame=\(contentView.frame), bounds=\(contentView.bounds)")
+        print("🔄 ScrollView: frame=\(scrollView.frame), bounds=\(scrollView.bounds), contentSize=\(scrollView.contentSize)")
+        print("------------------------\n")
     }
     
     override func viewDidAppear(_ animated: Bool) {
@@ -251,6 +277,9 @@ class AddTaskViewController: UIViewController {
         // Give time for layout to settle, then force proper content sizing
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
             guard let self = self else { return }
+            
+            // Ensure all views are properly configured
+            self.ensureViewsAreConfiguredProperly()
             
             // Force recalculation of content size
             self.recalculateScrollViewContentSize()
@@ -330,27 +359,25 @@ class AddTaskViewController: UIViewController {
             trailing: view.trailingAnchor
         )
         
-        // On iPad, center the content with a max width
-        if UIDevice.current.userInterfaceIdiom == .pad {
-            // Create a width constraint that's either 600 points or 80% of the view width, whichever is smaller
-            let maxWidth: CGFloat = min(600, view.bounds.width * 0.8)
-            
-            contentView.anchor(
-                top: scrollView.topAnchor,
-                width: maxWidth
-            )
-            contentView.centerXAnchor.constraint(equalTo: scrollView.centerXAnchor).isActive = true
-        } else {
-            // On iPhone, use full width
-            contentView.anchor(
-                top: scrollView.topAnchor,
-                leading: scrollView.leadingAnchor,
-                trailing: scrollView.trailingAnchor
-            )
-            contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor).isActive = true
-        }
+        // Critical fix: Proper contentView setup with explicit width and height constraints
+        contentView.translatesAutoresizingMaskIntoConstraints = false
         
-        // Set initial content size
+        // Add proper constraints to contentView
+        NSLayoutConstraint.activate([
+            // Anchor contentView to all edges of scrollView
+            contentView.topAnchor.constraint(equalTo: scrollView.topAnchor),
+            contentView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
+            contentView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
+            contentView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
+            
+            // Make contentView same width as scrollView
+            contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor)
+        ])
+        
+        // Set explicit minimum height for contentView
+        contentView.heightAnchor.constraint(greaterThanOrEqualToConstant: 800).isActive = true
+        
+        // Set initial content size to ensure scrollability
         scrollView.contentSize = CGSize(width: scrollView.bounds.width, height: 1200)
         
         // Enable scrolling features
@@ -358,6 +385,8 @@ class AddTaskViewController: UIViewController {
         scrollView.showsVerticalScrollIndicator = true
         scrollView.delaysContentTouches = false
         scrollView.keyboardDismissMode = .interactive
+        
+        print("📜 ScrollView setup completed with explicit contentView constraints")
     }
     
     private func setupTitleField() {
@@ -437,30 +466,53 @@ class AddTaskViewController: UIViewController {
             height: 44
         )
         
+        // Ensure proper styling
+        prioritySegmentedControl.backgroundColor = themeManager.containerBackgroundColor
+        prioritySegmentedControl.selectedSegmentTintColor = selectedPriority.color
+        
+        // Set priority colors for each segment
+        prioritySegmentedControl.setTitleTextAttributes([
+            .foregroundColor: themeManager.secondaryTextColor
+        ], for: .normal)
+        prioritySegmentedControl.setTitleTextAttributes([
+            .foregroundColor: UIColor.white
+        ], for: .selected)
+        
+        // Ensure initial selection is set
+        prioritySegmentedControl.selectedSegmentIndex = Int(selectedPriority.rawValue)
+        
+        // Add target action
         prioritySegmentedControl.addTarget(self, action: #selector(priorityChanged), for: .valueChanged)
+        
+        // Debug info
+        print("🔄 Priority control configured: items=\(PriorityLevel.allCases.map { $0.title }), selectedIndex=\(prioritySegmentedControl.selectedSegmentIndex)")
     }
     
     private func setupCategorySection() {
         contentView.addSubviews(categoryLabel, categoryButton)
         
-        categoryLabel.anchor(
-            top: prioritySegmentedControl.bottomAnchor,
-            leading: contentView.leadingAnchor,
-            paddingTop: 24,
-            paddingLeading: 24
-        )
+        // Make sure views have explicit frames
+        categoryLabel.translatesAutoresizingMaskIntoConstraints = false
+        categoryButton.translatesAutoresizingMaskIntoConstraints = false
         
-        categoryButton.anchor(
-            top: categoryLabel.bottomAnchor,
-            leading: contentView.leadingAnchor,
-            trailing: contentView.trailingAnchor,
-            paddingTop: 12,
-            paddingLeading: 20,
-            paddingTrailing: 20,
-            height: 50
-        )
+        // Use direct NSLayoutConstraint setup for more reliable frames
+        NSLayoutConstraint.activate([
+            // Label constraints
+            categoryLabel.topAnchor.constraint(equalTo: prioritySegmentedControl.bottomAnchor, constant: 24),
+            categoryLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
+            
+            // Button constraints
+            categoryButton.topAnchor.constraint(equalTo: categoryLabel.bottomAnchor, constant: 12),
+            categoryButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
+            categoryButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
+            categoryButton.heightAnchor.constraint(equalToConstant: 50)
+        ])
         
-        // Enhance visual indication that button is tappable
+        // Initialize button with non-zero frame
+        categoryButton.frame = CGRect(x: 20, y: 0, width: contentView.bounds.width - 40, height: 50)
+        categoryButton.layoutIfNeeded()
+        
+        // Ensure button is properly configured
         categoryButton.isUserInteractionEnabled = true
         categoryButton.backgroundColor = themeManager.containerBackgroundColor
         categoryButton.layer.cornerRadius = 15
@@ -487,31 +539,39 @@ class AddTaskViewController: UIViewController {
         
         categoryButton.tintColor = themeManager.secondaryTextColor
         
-        // Add target action
+        // Add target action with debug info
         categoryButton.addTarget(self, action: #selector(categoryButtonTapped), for: .touchUpInside)
+        print("📋 Category button configured: size=\(categoryButton.frame.size), tag=\(categoryButton.tag)")
+        
+        // Add a unique tag for easier debugging
+        categoryButton.tag = 1234
     }
     
     private func setupDateSection() {
         contentView.addSubviews(dateLabel, dateButton)
         
-        dateLabel.anchor(
-            top: categoryButton.bottomAnchor,
-            leading: contentView.leadingAnchor,
-            paddingTop: 24,
-            paddingLeading: 24
-        )
+        // Make sure views have explicit frames
+        dateLabel.translatesAutoresizingMaskIntoConstraints = false  
+        dateButton.translatesAutoresizingMaskIntoConstraints = false
         
-        dateButton.anchor(
-            top: dateLabel.bottomAnchor,
-            leading: contentView.leadingAnchor,
-            trailing: contentView.trailingAnchor,
-            paddingTop: 12,
-            paddingLeading: 20,
-            paddingTrailing: 20,
-            height: 50
-        )
+        // Use direct NSLayoutConstraint setup for more reliable frames
+        NSLayoutConstraint.activate([
+            // Label constraints
+            dateLabel.topAnchor.constraint(equalTo: categoryButton.bottomAnchor, constant: 24),
+            dateLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
+            
+            // Button constraints
+            dateButton.topAnchor.constraint(equalTo: dateLabel.bottomAnchor, constant: 12),
+            dateButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
+            dateButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
+            dateButton.heightAnchor.constraint(equalToConstant: 50)
+        ])
         
-        // Enhance visual indication that button is tappable
+        // Initialize button with non-zero frame
+        dateButton.frame = CGRect(x: 20, y: 0, width: contentView.bounds.width - 40, height: 50)
+        dateButton.layoutIfNeeded()
+        
+        // Ensure the button is properly configured
         dateButton.isUserInteractionEnabled = true
         dateButton.backgroundColor = themeManager.containerBackgroundColor
         dateButton.layer.cornerRadius = 15
@@ -539,13 +599,61 @@ class AddTaskViewController: UIViewController {
         dateButton.tintColor = themeManager.secondaryTextColor
         
         // Add target action
-//        view.bringSubviewToFront(dateButton)
-        dateButton.addTarget(self, action: #selector(datebutton2), for: .touchUpInside)
+        dateButton.addTarget(self, action: #selector(dateButtonTapped), for: .touchUpInside)
+        
+        // Add a unique tag for easier debugging
+        dateButton.tag = 5678
+        
+        // Debug info
+        print("📆 Date button configured: size=\(dateButton.frame.size), tag=\(dateButton.tag)")
     }
     
     @objc private func datebutton2(){
-        print("tapped datebutton")
+        print("tapped datebutton2 - should NOT be called anymore")
+        // Forward to the real method to avoid breaking functionality
+        dateButtonTapped()
     }
+    
+    @objc private func dateButtonTapped() {
+        // First dismiss keyboard if showing
+        print("DEBUG: Date button tapped - presenting date picker")
+        view.endEditing(true)
+        
+        // Add tap feedback animation
+        UIView.animate(withDuration: 0.1, animations: {
+            self.dateButton.transform = CGAffineTransform(scaleX: 0.97, y: 0.97)
+            self.dateButton.alpha = 0.8
+        }) { _ in
+            UIView.animate(withDuration: 0.1) {
+                self.dateButton.transform = .identity
+                self.dateButton.alpha = 1.0
+            }
+        }
+        
+        // Add haptic feedback
+        let feedback = UIImpactFeedbackGenerator(style: .light)
+        feedback.impactOccurred()
+        
+        // Show loading state with animation
+        UIView.transition(with: dateButton, duration: 0.2, options: .transitionCrossDissolve, animations: {
+            self.dateButton.setTitle("Opening date picker...", for: .normal)
+        })
+        
+        // Create a date picker view controller for better UX
+        let datePickerVC = DatePickerViewController()
+        datePickerVC.delegate = self
+        datePickerVC.initialDate = selectedDate ?? Date()
+        
+        let navController = UINavigationController(rootViewController: datePickerVC)
+        navController.modalPresentationStyle = .formSheet
+        present(navController, animated: true) {
+            // Reset button text if needed
+            if self.selectedDate == nil {
+                self.dateButton.setTitle("Set date", for: .normal)
+            }
+        }
+    }
+    
     private func setupSchedulingSection() {
         // Create container
         let schedulingContainer = UIView()
@@ -1071,9 +1179,9 @@ class AddTaskViewController: UIViewController {
         
         // For iPad, set the source view for the popover
         if UIDevice.current.userInterfaceIdiom == .pad {
-            if let popoverController = alert.popoverPresentationController {
-                popoverController.sourceView = categoryButton
-                popoverController.sourceRect = categoryButton.bounds
+        if let popoverController = alert.popoverPresentationController {
+            popoverController.sourceView = categoryButton
+            popoverController.sourceRect = categoryButton.bounds
                 popoverController.permittedArrowDirections = .any
             }
         }
@@ -1156,56 +1264,6 @@ class AddTaskViewController: UIViewController {
                 self.categoryButton.setTitleColor(self.themeManager.secondaryTextColor, for: .normal)
             })
         }
-    }
-    
-    @objc private func dateButtonTapped() {
-        // First dismiss keyboard if showing
-        print("DEBUG: Date button tapped - presenting date picker")
-        view.endEditing(true)
-        
-        // Add tap feedback animation
-        UIView.animate(withDuration: 0.1, animations: {
-            self.dateButton.transform = CGAffineTransform(scaleX: 0.97, y: 0.97)
-            self.dateButton.alpha = 0.8
-        }) { _ in
-            UIView.animate(withDuration: 0.1) {
-                self.dateButton.transform = .identity
-                self.dateButton.alpha = 1.0
-            }
-        }
-        
-        // Add haptic feedback
-        let feedback = UIImpactFeedbackGenerator(style: .light)
-        feedback.impactOccurred()
-        
-        
-        
-        // Show loading state with animation
-        UIView.transition(with: dateButton, duration: 0.2, options: .transitionCrossDissolve, animations: {
-            self.dateButton.setTitle("Opening date picker...", for: .normal)
-        })
-        
-        // Create a date picker view controller for better UX
-        let datePickerVC = DatePickerViewController()
-        datePickerVC.delegate = self
-        datePickerVC.initialDate = selectedDate ?? Date()
-        
-        let navController = UINavigationController(rootViewController: datePickerVC)
-        navController.modalPresentationStyle = .formSheet
-        present(navController, animated: true) {
-            // Reset button text if needed
-            if self.selectedDate == nil {
-                self.dateButton.setTitle("Set date", for: .normal)
-            }
-        }
-    }
-    
-    // Helper method to format date consistently
-    private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
     }
     
     @objc private func saveButtonTapped() {
@@ -1416,18 +1474,20 @@ class AddTaskViewController: UIViewController {
     private func setupSaveButton() {
         contentView.addSubview(saveButton)
         
-        saveButton.anchor(
-            top: contentView.subviews.last?.bottomAnchor ?? dateButton.bottomAnchor,
-            leading: contentView.leadingAnchor,
-            trailing: contentView.trailingAnchor,
-            paddingTop: 40,
-            paddingLeading: 20,
-            paddingTrailing: 20,
-            height: 60
-        )
+        // First add top constraint to position after the scheduling section
+        // (This will be the last section before the save button)
+        NSLayoutConstraint.activate([
+            saveButton.topAnchor.constraint(greaterThanOrEqualTo: contentView.subviews.last?.bottomAnchor ?? contentView.topAnchor, constant: 40),
+            saveButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
+            saveButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
+            saveButton.heightAnchor.constraint(equalToConstant: 60)
+        ])
         
-        // Add bottom constraint with padding
-        saveButton.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -40).isActive = true
+        // Add bottom constraint to contentView with explicit padding
+        // This ensures contentView expands to include the button
+        let bottomConstraint = saveButton.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -40)
+        bottomConstraint.priority = .defaultHigh
+        bottomConstraint.isActive = true
         
         // Make the button more easily tappable
         saveButton.isUserInteractionEnabled = true
@@ -1435,6 +1495,8 @@ class AddTaskViewController: UIViewController {
         
         // Add target action
         saveButton.addTarget(self, action: #selector(saveButtonTapped), for: .touchUpInside)
+        
+        print("💾 SaveButton setup with explicit constraints and bottom padding")
     }
     
     private func setupGestureRecognizers() {
@@ -1587,6 +1649,79 @@ class AddTaskViewController: UIViewController {
         }
     }
 
+    // Helper method to format date consistently
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
+    }
+
+    // Helper method to fix frame/layout issues for all views
+    private func ensureViewsAreConfiguredProperly() {
+        // Force content view to have proper size
+        if contentView.frame.height < 800 {
+            contentView.frame.size = CGSize(width: scrollView.bounds.width, height: 1200)
+            print("⚠️ Fixed inadequate contentView height: \(contentView.frame.height)")
+        }
+        
+        // Force layout of category button 
+        if categoryButton.frame.isEmpty || categoryButton.frame.size.width < 50 {
+            // Force a proper frame
+            let buttonWidth = contentView.bounds.width - 40 // 20pt padding on each side
+            categoryButton.frame = CGRect(x: 20, y: categoryButton.frame.origin.y, width: buttonWidth, height: 50)
+            categoryButton.setNeedsLayout()
+            categoryButton.layoutIfNeeded()
+            print("⚠️ Fixed empty categoryButton frame: now \(categoryButton.frame)")
+        }
+        
+        // Force layout of date button
+        if dateButton.frame.isEmpty || dateButton.frame.size.width < 50 {
+            // Force a proper frame
+            let buttonWidth = contentView.bounds.width - 40 // 20pt padding on each side
+            dateButton.frame = CGRect(x: 20, y: dateButton.frame.origin.y, width: buttonWidth, height: 50)
+            dateButton.setNeedsLayout()
+            dateButton.layoutIfNeeded()
+            print("⚠️ Fixed empty dateButton frame: now \(dateButton.frame)")
+        }
+        
+        // Ensure proper priority segment setup
+        if prioritySegmentedControl.frame.width < 100 {
+            prioritySegmentedControl.frame.size = CGSize(width: contentView.bounds.width - 40, height: 44)
+            prioritySegmentedControl.setNeedsLayout()
+            prioritySegmentedControl.layoutIfNeeded()
+            print("⚠️ Fixed prioritySegmentedControl frame: now \(prioritySegmentedControl.frame)")
+        }
+        
+        // Fix save button if needed
+        if saveButton.frame.isEmpty || saveButton.frame.origin.y < 0 {
+            let yPos = max(contentView.bounds.height - 100, categoryButton.frame.maxY + 200)
+            saveButton.frame = CGRect(x: 20, y: yPos, width: contentView.bounds.width - 40, height: 60)
+            saveButton.setNeedsLayout()
+            saveButton.layoutIfNeeded()
+            print("⚠️ Fixed saveButton frame: now \(saveButton.frame)")
+        }
+        
+        // Force contentView to be tall enough
+        let lowestView = saveButton.convert(saveButton.bounds, to: contentView).maxY
+        if contentView.bounds.height < lowestView + 40 {
+            contentView.frame.size.height = lowestView + 40
+            scrollView.contentSize.height = contentView.frame.size.height
+            print("⚠️ Adjusted contentView height to fit all content: \(contentView.frame.height)")
+        }
+        
+        // Check buttons are interactive
+        if !categoryButton.isUserInteractionEnabled {
+            categoryButton.isUserInteractionEnabled = true
+            print("⚠️ Fixed categoryButton.isUserInteractionEnabled")
+        }
+        
+        if !dateButton.isUserInteractionEnabled {
+            dateButton.isUserInteractionEnabled = true
+            print("⚠️ Fixed dateButton.isUserInteractionEnabled")
+        }
+    }
+
 }
 
 // MARK: - UITextViewDelegate
@@ -1624,3 +1759,5 @@ extension AddTaskViewController: DatePickerViewControllerDelegate {
 }
 
 // Override viewWillLayoutSubviews to ensure proper content sizing
+
+

@@ -229,4 +229,20 @@ class CoreDataManager {
             return 0
         }
     }
+    
+    func markTaskAsCompleted(_ task: NSManagedObject, isCompleted: Bool) {
+        // Set completion status
+        task.setValue(isCompleted, forKey: "isCompleted")
+        
+        // If marking as completed, set the completion date
+        if isCompleted {
+            task.setValue(Date(), forKey: "completedAt")
+        } else {
+            // If marking as incomplete, remove the completion date
+            task.setValue(nil, forKey: "completedAt")
+        }
+        
+        // Save context
+        saveContext()
+    }
 }

@@ -114,6 +114,7 @@ class TasksViewController: UIViewController {
         setupAddButton()
         setupRefreshControl()
         setupNotificationObservers()
+        setupNavigationBar()
         
         // Listen for theme changes
         NotificationCenter.default.addObserver(
@@ -363,6 +364,17 @@ class TasksViewController: UIViewController {
         )
     }
     
+    private func setupNavigationBar() {
+        // Add AI Assistant button to navigation bar
+        let aiButton = UIBarButtonItem(
+            image: UIImage(systemName: "wand.and.stars"),
+            style: .plain,
+            target: self,
+            action: #selector(showAIAssistant)
+        )
+        navigationItem.rightBarButtonItem = aiButton
+    }
+    
     private func applyThemeAndStyles() {
         // Update colors based on theme
         view.backgroundColor = themeManager.backgroundColor
@@ -540,6 +552,13 @@ class TasksViewController: UIViewController {
         updateEmptyStateVisibility()
     }
     
+    @objc private func showAIAssistant() {
+        let aiVC = AIPrioritizationViewController()
+        let navController = UINavigationController(rootViewController: aiVC)
+        navController.modalPresentationStyle = .formSheet
+        present(navController, animated: true)
+    }
+    
     // MARK: - Core Data
     private func fetchTasks() {
         let context = CoreDataManager.shared.viewContext
@@ -635,9 +654,11 @@ class TasksViewController: UIViewController {
         // Get the task to update
         let taskToUpdate = isSearching ? filteredTasks[indexPath.row] : tasks[indexPath.row]
         
-        // Toggle completion status
+        // Get current completion status
         let currentValue = taskToUpdate.value(forKey: "isCompleted") as? Bool ?? false
-        taskToUpdate.setValue(!currentValue, forKey: "isCompleted")
+        
+        // Mark task as completed/incomplete using the new method which tracks completion date
+        CoreDataManager.shared.markTaskAsCompleted(taskToUpdate, isCompleted: !currentValue)
         
         // Handle scheduling integrations based on completion state
         if !currentValue == true {
@@ -650,27 +671,19 @@ class TasksViewController: UIViewController {
             }
         }
         
-        // Save the context
-        do {
-            try context.save()
-            
-            // Update UI
-            tableView.reloadRows(at: [indexPath], with: .automatic)
-            
-            // Update task count
-            let completedCount = tasks.filter { $0.value(forKey: "isCompleted") as? Bool ?? false }.count
-            taskCountLabel.text = "\(completedCount)/\(tasks.count) completed"
-            
-            // Add haptic feedback
-            let generator = UISelectionFeedbackGenerator()
-            generator.selectionChanged()
-            
-            // Notify of data change
-            NotificationCenter.default.post(name: NSNotification.Name("TaskDataChanged"), object: nil)
-        } catch {
-            print("Error updating task: \(error)")
-            showErrorAlert(message: "Failed to update task. Please try again.")
-        }
+        // Update UI
+        tableView.reloadRows(at: [indexPath], with: .automatic)
+        
+        // Update task count
+        let completedCount = tasks.filter { $0.value(forKey: "isCompleted") as? Bool ?? false }.count
+        taskCountLabel.text = "\(completedCount)/\(tasks.count) completed"
+        
+        // Add haptic feedback
+        let generator = UISelectionFeedbackGenerator()
+        generator.selectionChanged()
+        
+        // Notify of data change
+        NotificationCenter.default.post(name: NSNotification.Name("TaskDataChanged"), object: nil)
     }
     
     // MARK: - Helper Methods

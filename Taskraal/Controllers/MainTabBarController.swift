@@ -34,11 +34,13 @@ class MainTabBarController: UITabBarController {
     func setupTabs() {
         let tasksVC = TasksViewController()
         let categoriesVC = CategoriesViewController()
+        let aiTaskVC = AIPrioritizationViewController()
         let settingsVC = SettingsViewController()
         
         // Configure each view controller
         configureController(tasksVC, title: "Tasks")
         configureController(categoriesVC, title: "Categories")
+        configureController(aiTaskVC, title: "AI Assistant")
         configureController(settingsVC, title: "Settings")
         
         // Create navigation controllers
@@ -46,10 +48,12 @@ class MainTabBarController: UITabBarController {
                                                     image: "checklist", selectedImage: "checklist.fill")
         let categoriesNavController = createNavController(for: categoriesVC, title: "Categories",
                                                          image: "folder", selectedImage: "folder.fill")
+        let aiTaskNavController = createNavController(for: aiTaskVC, title: "AI Assistant",
+                                                     image: "wand.and.stars", selectedImage: "wand.and.stars.fill")
         let settingsNavController = createNavController(for: settingsVC, title: "Settings",
                                                        image: "gear", selectedImage: "gear.fill")
         
-        setViewControllers([tasksNavController, categoriesNavController, settingsNavController], animated: true)
+        setViewControllers([tasksNavController, categoriesNavController, aiTaskNavController, settingsNavController], animated: true)
     }
     
     private func configureController(_ viewController: UIViewController, title: String) {
@@ -148,9 +152,9 @@ class MainTabBarController: UITabBarController {
         container.addSubview(separatorView)
         
         // Add indicator lights for selected tab
-        for i in 0...2 {
+        for i in 0...3 {
             let indicatorLight = UIView()
-            indicatorLight.frame = CGRect(x: (container.frame.width / 3) * CGFloat(i) + (container.frame.width / 6) - 3,
+            indicatorLight.frame = CGRect(x: (container.frame.width / 4) * CGFloat(i) + (container.frame.width / 8) - 3,
                                         y: 12,
                                         width: 6,
                                         height: 6)
@@ -170,7 +174,7 @@ class MainTabBarController: UITabBarController {
         if let container = view.viewWithTag(999) {
             // Batch update indicators
             UIView.animate(withDuration: 0.3, delay: 0, options: [.allowUserInteraction], animations: {
-                for i in 0...2 {
+                for i in 0...3 {
                     if let indicator = container.viewWithTag(1000 + i) {
                         // Only animate the selected indicator
                         if i == self.selectedIndex {
