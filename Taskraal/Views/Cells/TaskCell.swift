@@ -94,6 +94,11 @@ class TaskCell: UITableViewCell {
     override func layoutSubviews() {
         super.layoutSubviews()
         applyThemeAndStyles()
+        
+        // Update shadow paths whenever layout changes
+        if containerView.layer.shadowOpacity > 0 {
+            containerView.layer.shadowPath = UIBezierPath(roundedRect: containerView.bounds, cornerRadius: 16).cgPath
+        }
     }
     
     override func prepareForReuse() {
@@ -138,20 +143,23 @@ class TaskCell: UITableViewCell {
         )
         checkboxButton.centerY(in: containerView)
         
+        // Fix ambiguous height by adding explicit height constraints
         taskNameLabel.anchor(
             top: containerView.topAnchor,
             leading: checkboxButton.trailingAnchor,
             trailing: priorityIndicator.leadingAnchor,
             paddingTop: 14,
             paddingLeading: 12,
-            paddingTrailing: 12
+            paddingTrailing: 12,
+            height: 22
         )
         
         categoryLabel.anchor(
             top: taskNameLabel.bottomAnchor,
             leading: taskNameLabel.leadingAnchor,
             trailing: taskNameLabel.trailingAnchor,
-            paddingTop: 4
+            paddingTop: 4,
+            height: 20
         )
         
         dueDateLabel.anchor(
@@ -159,7 +167,8 @@ class TaskCell: UITableViewCell {
             leading: taskNameLabel.leadingAnchor,
             bottom: containerView.bottomAnchor,
             paddingTop: 4,
-            paddingBottom: 14
+            paddingBottom: 14,
+            height: 18
         )
         
         priorityIndicator.anchor(
@@ -180,6 +189,7 @@ class TaskCell: UITableViewCell {
         
         // Set background color
         containerView.backgroundColor = themeManager.backgroundColor
+        containerView.layer.cornerRadius = 16
         
         // Update text colors based on state
         categoryLabel.textColor = themeManager.secondaryTextColor
@@ -188,26 +198,36 @@ class TaskCell: UITableViewCell {
         // Update completion status (which handles taskNameLabel styling)
         updateCheckboxState()
         
-        // Apply neumorphic effects based on completion state
+        // Apply optimized shadow rendering
         if isCompleted {
-            // For completed tasks, use inset effect to make it look "pushed in"
-            containerView.addInsetNeumorphicEffect(
-                cornerRadius: 16,
-                backgroundColor: themeManager.backgroundColor
-            )
+            // For completed tasks, use subtle border
+            containerView.layer.borderWidth = 1
+            containerView.layer.borderColor = themeManager.secondaryTextColor.withAlphaComponent(0.2).cgColor
+            containerView.layer.shadowOpacity = 0
         } else {
-            // For incomplete tasks, use standard neumorphic effect
-            containerView.addNeumorphicEffect(
-                cornerRadius: 16,
-                backgroundColor: themeManager.backgroundColor
-            )
+            // For incomplete tasks, use shadow with explicit path
+            containerView.layer.borderWidth = 0
+            containerView.layer.shadowColor = UIColor.black.cgColor
+            containerView.layer.shadowOffset = CGSize(width: 2, height: 2)
+            containerView.layer.shadowOpacity = 0.1
+            containerView.layer.shadowRadius = 4
+            
+            // Add shadow path for better performance
+            let shadowPath = UIBezierPath(roundedRect: containerView.bounds, cornerRadius: 16).cgPath
+            containerView.layer.shadowPath = shadowPath
         }
         
-        // Apply inset neumorphic effect to checkbox
-        checkboxButton.addInsetNeumorphicEffect(
-            cornerRadius: 12,
-            backgroundColor: isCompleted ? themeManager.currentThemeColor : themeManager.backgroundColor
-        )
+        // Apply optimized style to checkbox
+        checkboxButton.layer.cornerRadius = 12
+        
+        if isCompleted {
+            checkboxButton.backgroundColor = themeManager.currentThemeColor
+            checkboxButton.layer.borderWidth = 0
+        } else {
+            checkboxButton.backgroundColor = themeManager.backgroundColor
+            checkboxButton.layer.borderWidth = 1
+            checkboxButton.layer.borderColor = themeManager.secondaryTextColor.withAlphaComponent(0.3).cgColor
+        }
     }
     
     // MARK: - Action
@@ -233,65 +253,30 @@ class TaskCell: UITableViewCell {
     }
     
     @objc private func handleThemeChanged() {
-        // Completely rebuild the cell
-        
-        // Clean up existing neumorphic effects
-        cleanupNeumorphicEffects()
-        
-        // Reset and reapply the background color
-        containerView.backgroundColor = themeManager.backgroundColor
-        
-        // Reset checkbox appearance
-        if isCompleted {
-            checkboxButton.backgroundColor = themeManager.currentThemeColor
-            checkboxButton.tintColor = .white
-        } else {
-            checkboxButton.backgroundColor = themeManager.backgroundColor
-            checkboxButton.tintColor = themeManager.textColor
-        }
-        
-        // Update colors for all elements
-        categoryLabel.textColor = themeManager.secondaryTextColor
-        dueDateLabel.textColor = themeManager.secondaryTextColor
-        
-        // Reapply completion state styling
-        updateCheckboxState()
-        
-        // Reapply neumorphic styling based on completion state
-        if isCompleted {
-            containerView.addInsetNeumorphicEffect(
-                cornerRadius: 16,
-                backgroundColor: themeManager.backgroundColor
-            )
-        } else {
-            containerView.addNeumorphicEffect(
-                cornerRadius: 16,
-                backgroundColor: themeManager.backgroundColor
-            )
-        }
-        
-        // Apply inset neumorphic effect to checkbox
-        checkboxButton.addInsetNeumorphicEffect(
-            cornerRadius: 12,
-            backgroundColor: isCompleted ? themeManager.currentThemeColor : themeManager.backgroundColor
-        )
+        // Apply optimized styling
+        applyThemeAndStyles()
     }
     
     // Helper method to clean up neumorphic effects
     private func cleanupNeumorphicEffects() {
+        // Remove existing visual effects
+        containerView.layer.shadowOpacity = 0
+        containerView.layer.borderWidth = 0
+        checkboxButton.layer.borderWidth = 0
+        
         // Remove any existing neumorphic view subviews by tag
         contentView.subviews.forEach { subview in
-            if subview.tag == 1001 || subview.tag == 1002 {
+            if subview.tag == 1001 || subview.tag == 1002 || subview.tag == 2001 {
                 subview.removeFromSuperview()
             }
         }
         
-        // Clean specific shadow layers instead of removing all sublayers
-        containerView.layer.sublayers?.filter { $0.name == "neumorphicShadow" }.forEach {
+        // Clean specific shadow layers
+        containerView.layer.sublayers?.filter { $0.name == "neumorphicShadow" || $0.name == "optimizedShadow" }.forEach {
             $0.removeFromSuperlayer()
         }
         
-        checkboxButton.layer.sublayers?.filter { $0.name == "neumorphicShadow" }.forEach {
+        checkboxButton.layer.sublayers?.filter { $0.name == "neumorphicShadow" || $0.name == "optimizedShadow" }.forEach {
             $0.removeFromSuperlayer()
         }
     }
@@ -363,23 +348,7 @@ class TaskCell: UITableViewCell {
         // Now set completion state which will trigger updateCheckboxState
         self.isCompleted = isCompleted
         
-        // Apply neumorphic effects based on completion state
-        if isCompleted {
-            containerView.addInsetNeumorphicEffect(
-                cornerRadius: 16,
-                backgroundColor: themeManager.backgroundColor
-            )
-        } else {
-            containerView.addNeumorphicEffect(
-                cornerRadius: 16,
-                backgroundColor: themeManager.backgroundColor
-            )
-        }
-        
-        // Apply neumorphic effect to checkbox
-        checkboxButton.addInsetNeumorphicEffect(
-            cornerRadius: 12,
-            backgroundColor: isCompleted ? themeManager.currentThemeColor : themeManager.backgroundColor
-        )
+        // Apply optimized rendering with shadow path
+        applyThemeAndStyles()
     }
 }

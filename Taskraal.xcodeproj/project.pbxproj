@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		DB34CE772DA438F7007DE17F /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB34CE762DA438F6007DE17F /* ThemeManager.swift */; };
+		DB34CE9B2DA70371007DE17F /* SchedulingServices.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB34CE9A2DA70371007DE17F /* SchedulingServices.swift */; };
 		DB6FA5682D9E862800633F8F /* TaskCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB6FA5672D9E862800633F8F /* TaskCell.swift */; };
 		DB6FA56A2D9E870200633F8F /* AddTaskViewcontoller.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB6FA5692D9E870200633F8F /* AddTaskViewcontoller.swift */; };
 		DB6FA56C2D9E886000633F8F /* CategoryDetailViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB6FA56B2D9E886000633F8F /* CategoryDetailViewController.swift */; };
@@ -52,6 +53,7 @@
 
 /* Begin PBXFileReference section */
 		DB34CE762DA438F6007DE17F /* ThemeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeManager.swift; sourceTree = "<group>"; };
+		DB34CE9A2DA70371007DE17F /* SchedulingServices.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchedulingServices.swift; sourceTree = "<group>"; };
 		DB6FA5672D9E862800633F8F /* TaskCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskCell.swift; sourceTree = "<group>"; };
 		DB6FA5692D9E870200633F8F /* AddTaskViewcontoller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddTaskViewcontoller.swift; sourceTree = "<group>"; };
 		DB6FA56B2D9E886000633F8F /* CategoryDetailViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryDetailViewController.swift; sourceTree = "<group>"; };
@@ -208,6 +210,7 @@
 			isa = PBXGroup;
 			children = (
 				DB6FA57A2D9FA74400633F8F /* CoreDataManger.swift */,
+				DB34CE9A2DA70371007DE17F /* SchedulingServices.swift */,
 				DB34CE762DA438F6007DE17F /* ThemeManager.swift */,
 			);
 			path = Services;
@@ -372,6 +375,7 @@
 				DB6FA56C2D9E886000633F8F /* CategoryDetailViewController.swift in Sources */,
 				DBBF60682D81859D00465BFF /* CategoriesViewController.swift in Sources */,
 				DBBF60662D81857900465BFF /* TaskViewController.swift in Sources */,
+				DB34CE9B2DA70371007DE17F /* SchedulingServices.swift in Sources */,
 				DB34CE772DA438F7007DE17F /* ThemeManager.swift in Sources */,
 				DBBF60642D817E1E00465BFF /* MainTabBarController.swift in Sources */,
 				DB6FA56A2D9E870200633F8F /* AddTaskViewcontoller.swift in Sources */,

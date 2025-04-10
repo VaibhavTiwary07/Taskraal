@@ -20,14 +20,23 @@ class CoreDataManager {
     lazy var persistentContainer: NSPersistentContainer = {
         // Make sure "Taskraal" matches your .xcdatamodeld filename
         let container = NSPersistentContainer(name: "Taskraal")
-        container.loadPersistentStores { (storeDescription, error) in
+        
+        // Set up the description to enable automatic migrations
+        let description = NSPersistentStoreDescription()
+        description.shouldMigrateStoreAutomatically = true
+        description.shouldInferMappingModelAutomatically = true
+        
+        // Set the persistent store descriptions
+        container.persistentStoreDescriptions = [description]
+        
+        container.loadPersistentStores(completionHandler: { (storeDescription, error) in
             if let error = error as NSError? {
                 // You can handle errors here - typically you'd want to
                 // inform the user that something went wrong
                 print("Core Data store failed to load: \(error.localizedDescription)")
                 print("Detailed error: \(error), \(error.userInfo)")
             }
-        }
+        })
         
         // For better performance with background operations
         container.viewContext.automaticallyMergesChangesFromParent = true

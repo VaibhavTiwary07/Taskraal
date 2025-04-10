@@ -7,6 +7,7 @@
 
 import UIKit
 import CoreData
+import EventKit
 
 // MARK: - AddTaskViewControllerDelegate Protocol
 protocol AddTaskViewControllerDelegate: AnyObject {
@@ -44,15 +45,24 @@ class AddTaskViewController: UIViewController {
     // Keyboard handling
     private var keyboardHeight: CGFloat = 0
     
+    // Scheduling properties
+    private let schedulingService = SchedulingService.shared
+    private var integrateWithCalendar: Bool = false
+    private var integrateWithReminders: Bool = false
+    private var enableNotifications: Bool = false
+    
+    // Add property to store datePicker reference
+    private var tempDatePicker: UIDatePicker?
+    
     // MARK: - UI Elements
-    private let scrollView: UIScrollView = {
+    private var scrollView: UIScrollView = {
         let scrollView = UIScrollView()
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.backgroundColor = .clear
         return scrollView
     }()
     
-    private let contentView: UIView = {
+    private var contentView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
         view.backgroundColor = .clear
@@ -168,10 +178,14 @@ class AddTaskViewController: UIViewController {
         setupPrioritySection()
         setupCategorySection()
         setupDateSection()
+        setupSchedulingSection()
         setupSaveButton()
         setupGestureRecognizers()
         setupTextViewDelegate()
         setupKeyboardObservers()
+        
+        // Fix scrollView issue by setting explicit content size
+        scrollView.contentSize = CGSize(width: scrollView.bounds.width, height: 1200)
         
         // Pre-fetch categories for smoother category selection
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
@@ -185,16 +199,75 @@ class AddTaskViewController: UIViewController {
             name: ThemeManager.themeChangedNotification,
             object: nil
         )
+        
+        // Listen for scheduling permission changes
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleSchedulingPermissionsChanged),
+            name: SchedulingService.schedulingPermissionsChanged,
+            object: nil
+        )
     }
     
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         applyThemeAndStyles()
+        recalculateScrollViewContentSize()
+        
+        // Update shadow paths when layout changes
+        if titleContainer.bounds.size != .zero {
+            titleContainer.layer.shadowPath = UIBezierPath(roundedRect: titleContainer.bounds, cornerRadius: 15).cgPath
+        }
+        
+        if detailsContainer.bounds.size != .zero {
+            detailsContainer.layer.shadowPath = UIBezierPath(roundedRect: detailsContainer.bounds, cornerRadius: 15).cgPath
+        }
+        
+        if categoryButton.bounds.size != .zero {
+            categoryButton.layer.shadowPath = UIBezierPath(roundedRect: categoryButton.bounds, cornerRadius: 15).cgPath
+        }
+        
+        if dateButton.bounds.size != .zero {
+            dateButton.layer.shadowPath = UIBezierPath(roundedRect: dateButton.bounds, cornerRadius: 15).cgPath
+        }
+        
+        if saveButton.bounds.size != .zero {
+            saveButton.layer.shadowPath = UIBezierPath(roundedRect: saveButton.bounds, cornerRadius: saveButton.layer.cornerRadius).cgPath
+            
+            // Also update the inner glow layer
+            if let innerGlow = saveButton.layer.sublayers?.first as? CAGradientLayer {
+                innerGlow.frame = saveButton.bounds
+                innerGlow.cornerRadius = saveButton.layer.cornerRadius
+            }
+        }
+        
+        // Update all views with neumorphic effects
+        view.updateNeumorphicShadowPaths()
     }
     
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        titleTextField.becomeFirstResponder()
+        
+        // Give time for layout to settle, then force proper content sizing
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            guard let self = self else { return }
+            
+            // Force recalculation of content size
+            self.recalculateScrollViewContentSize()
+            
+            // Ensure save button is visible
+            let saveButtonFrame = self.saveButton.convert(self.saveButton.bounds, to: self.scrollView)
+            let visible = self.scrollView.bounds.contains(saveButtonFrame) || 
+                          self.scrollView.bounds.intersects(saveButtonFrame)
+            
+            if !visible {
+                // Scroll to show the save button
+                self.scrollView.scrollRectToVisible(CGRect(x: 0, y: self.scrollView.contentSize.height - 200, width: self.scrollView.bounds.width, height: 200), animated: true)
+            }
+            
+            // Set initial focus to title field
+            self.titleTextField.becomeFirstResponder()
+        }
     }
     
     deinit {
@@ -205,6 +278,12 @@ class AddTaskViewController: UIViewController {
     private func setupView() {
         view.backgroundColor = themeManager.backgroundColor
         title = isEditingTask ? "Edit Task" : "Add Task"
+        setupNavigationBar()
+        
+        // Initialize integration options from user defaults
+        integrateWithCalendar = schedulingService.calendarIntegrationEnabled
+        integrateWithReminders = schedulingService.reminderIntegrationEnabled
+        enableNotifications = schedulingService.notificationsEnabled
     }
     
     private func setupNavigationBar() {
@@ -251,18 +330,34 @@ class AddTaskViewController: UIViewController {
             trailing: view.trailingAnchor
         )
         
-        contentView.anchor(
-            top: scrollView.topAnchor,
-            leading: scrollView.leadingAnchor,
-            bottom: scrollView.bottomAnchor,
-            trailing: scrollView.trailingAnchor,
-            width: view.frame.width
-        )
+        // On iPad, center the content with a max width
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            // Create a width constraint that's either 600 points or 80% of the view width, whichever is smaller
+            let maxWidth: CGFloat = min(600, view.bounds.width * 0.8)
+            
+            contentView.anchor(
+                top: scrollView.topAnchor,
+                width: maxWidth
+            )
+            contentView.centerXAnchor.constraint(equalTo: scrollView.centerXAnchor).isActive = true
+        } else {
+            // On iPhone, use full width
+            contentView.anchor(
+                top: scrollView.topAnchor,
+                leading: scrollView.leadingAnchor,
+                trailing: scrollView.trailingAnchor
+            )
+            contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor).isActive = true
+        }
         
-        // Ensure content view height is at least as tall as the scroll view
-        let contentViewHeight = contentView.heightAnchor.constraint(greaterThanOrEqualTo: scrollView.heightAnchor)
-        contentViewHeight.priority = .defaultLow
-        contentViewHeight.isActive = true
+        // Set initial content size
+        scrollView.contentSize = CGSize(width: scrollView.bounds.width, height: 1200)
+        
+        // Enable scrolling features
+        scrollView.alwaysBounceVertical = true
+        scrollView.showsVerticalScrollIndicator = true
+        scrollView.delaysContentTouches = false
+        scrollView.keyboardDismissMode = .interactive
     }
     
     private func setupTitleField() {
@@ -362,9 +457,37 @@ class AddTaskViewController: UIViewController {
             paddingTop: 12,
             paddingLeading: 20,
             paddingTrailing: 20,
-            height: 44
+            height: 50
         )
         
+        // Enhance visual indication that button is tappable
+        categoryButton.isUserInteractionEnabled = true
+        categoryButton.backgroundColor = themeManager.containerBackgroundColor
+        categoryButton.layer.cornerRadius = 15
+        
+        // Add right chevron icon to indicate it's tappable
+        let chevronImage = UIImage(systemName: "chevron.right")
+        
+        // Modern approach replacing deprecated imageEdgeInsets
+        if #available(iOS 15.0, *) {
+            var config = UIButton.Configuration.plain()
+            config.image = chevronImage
+            config.imagePlacement = .trailing
+            config.imagePadding = 10
+            config.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16)
+            config.titleAlignment = .leading
+            categoryButton.configuration = config
+            categoryButton.setTitle("Select category", for: .normal)
+        } else {
+            // Fallback for iOS 14 and earlier
+            categoryButton.setImage(chevronImage, for: .normal)
+            categoryButton.semanticContentAttribute = .forceRightToLeft
+            categoryButton.imageEdgeInsets = UIEdgeInsets(top: 0, left: 10, bottom: 0, right: 0)
+        }
+        
+        categoryButton.tintColor = themeManager.secondaryTextColor
+        
+        // Add target action
         categoryButton.addTarget(self, action: #selector(categoryButtonTapped), for: .touchUpInside)
     }
     
@@ -385,92 +508,236 @@ class AddTaskViewController: UIViewController {
             paddingTop: 12,
             paddingLeading: 20,
             paddingTrailing: 20,
-            height: 44
-        )
-        
-        dateButton.addTarget(self, action: #selector(dateButtonTapped), for: .touchUpInside)
-    }
-    
-    private func setupSaveButton() {
-        contentView.addSubview(saveButton)
-        
-        saveButton.anchor(
-            top: dateButton.bottomAnchor,
-            leading: contentView.leadingAnchor,
-            bottom: contentView.bottomAnchor,
-            trailing: contentView.trailingAnchor,
-            paddingTop: 40,
-            paddingLeading: 20,
-            paddingBottom: 40,
-            paddingTrailing: 20,
             height: 50
         )
         
-        saveButton.addTarget(self, action: #selector(saveButtonTapped), for: .touchUpInside)
-    }
-    
-    private func setupGestureRecognizers() {
-        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
-        tapGesture.cancelsTouchesInView = false
-        view.addGestureRecognizer(tapGesture)
-    }
-    
-    private func setupTextViewDelegate() {
-        detailsTextView.delegate = self
-    }
-    
-    private func setupKeyboardObservers() {
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(keyboardWillShow),
-            name: UIResponder.keyboardWillShowNotification,
-            object: nil
-        )
+        // Enhance visual indication that button is tappable
+        dateButton.isUserInteractionEnabled = true
+        dateButton.backgroundColor = themeManager.containerBackgroundColor
+        dateButton.layer.cornerRadius = 15
         
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(keyboardWillHide),
-            name: UIResponder.keyboardWillHideNotification,
-            object: nil
-        )
-    }
-    
-    @objc private func keyboardWillShow(_ notification: Notification) {
-        guard let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else {
-            return
+        // Add calendar icon to indicate it's tappable
+        let calendarImage = UIImage(systemName: "calendar")
+        
+        // Modern approach replacing deprecated imageEdgeInsets
+        if #available(iOS 15.0, *) {
+            var config = UIButton.Configuration.plain()
+            config.image = calendarImage
+            config.imagePlacement = .trailing
+            config.imagePadding = 10
+            config.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16)
+            config.titleAlignment = .leading
+            dateButton.configuration = config
+            dateButton.setTitle("Set date", for: .normal)
+        } else {
+            // Fallback for iOS 14 and earlier
+            dateButton.setImage(calendarImage, for: .normal)
+            dateButton.semanticContentAttribute = .forceRightToLeft
+            dateButton.imageEdgeInsets = UIEdgeInsets(top: 0, left: 10, bottom: 0, right: 0)
         }
         
-        let keyboardHeight = keyboardFrame.height
-        self.keyboardHeight = keyboardHeight
+        dateButton.tintColor = themeManager.secondaryTextColor
         
-        // Adjust scroll view insets
-        scrollView.contentInset.bottom = keyboardHeight
-        scrollView.scrollIndicatorInsets.bottom = keyboardHeight
+        // Add target action
+//        view.bringSubviewToFront(dateButton)
+        dateButton.addTarget(self, action: #selector(datebutton2), for: .touchUpInside)
+    }
+    
+    @objc private func datebutton2(){
+        print("tapped datebutton")
+    }
+    private func setupSchedulingSection() {
+        // Create container
+        let schedulingContainer = UIView()
+        schedulingContainer.translatesAutoresizingMaskIntoConstraints = false
+        schedulingContainer.backgroundColor = themeManager.containerBackgroundColor
+        schedulingContainer.layer.cornerRadius = 15
         
-        // Find the active text field and scroll to it
-        if titleTextField.isFirstResponder {
-            scrollToVisible(view: titleContainer)
-        } else if detailsTextView.isFirstResponder {
-            scrollToVisible(view: detailsContainer)
+        contentView.addSubview(schedulingContainer)
+        schedulingContainer.anchor(
+            top: dateButton.bottomAnchor,
+            leading: contentView.leadingAnchor,
+            trailing: contentView.trailingAnchor,
+            paddingTop: 20,
+            paddingLeading: 20,
+            paddingTrailing: 20
+        )
+        
+        // Add a title label
+        let schedulingLabel = UILabel()
+        schedulingLabel.translatesAutoresizingMaskIntoConstraints = false
+        schedulingLabel.text = "Scheduling & Reminders"
+        schedulingLabel.font = UIFont.systemFont(ofSize: 16, weight: .medium)
+        schedulingLabel.textColor = themeManager.textColor
+        
+        // Create switches for integration options
+        let calendarSwitch = createToggleRow(title: "Add to Calendar", isOn: integrateWithCalendar)
+        let remindersSwitch = createToggleRow(title: "Create Reminder", isOn: integrateWithReminders)
+        let notificationSwitch = createToggleRow(title: "Enable Notifications", isOn: enableNotifications)
+        
+        // Add components to container
+        schedulingContainer.addSubviews(schedulingLabel, calendarSwitch.container, remindersSwitch.container, notificationSwitch.container)
+        
+        // Layout
+        schedulingLabel.anchor(
+            top: schedulingContainer.topAnchor,
+            leading: schedulingContainer.leadingAnchor,
+            paddingTop: 16,
+            paddingLeading: 16
+        )
+        
+        calendarSwitch.container.anchor(
+            top: schedulingLabel.bottomAnchor,
+            leading: schedulingContainer.leadingAnchor,
+            trailing: schedulingContainer.trailingAnchor,
+            paddingTop: 16,
+            paddingLeading: 16,
+            paddingTrailing: 16,
+            height: 40
+        )
+        
+        remindersSwitch.container.anchor(
+            top: calendarSwitch.container.bottomAnchor,
+            leading: schedulingContainer.leadingAnchor,
+            trailing: schedulingContainer.trailingAnchor,
+            paddingTop: 8,
+            paddingLeading: 16,
+            paddingTrailing: 16,
+            height: 40
+        )
+        
+        notificationSwitch.container.anchor(
+            top: remindersSwitch.container.bottomAnchor,
+            leading: schedulingContainer.leadingAnchor,
+            bottom: schedulingContainer.bottomAnchor, trailing: schedulingContainer.trailingAnchor,
+            paddingTop: 8,
+            paddingLeading: 16,
+            paddingBottom: 16, paddingTrailing: 16,
+            height: 40
+        )
+        
+        // Add actions
+        calendarSwitch.toggle.addTarget(self, action: #selector(calendarSwitchChanged(_:)), for: .valueChanged)
+        remindersSwitch.toggle.addTarget(self, action: #selector(remindersSwitchChanged(_:)), for: .valueChanged)
+        notificationSwitch.toggle.addTarget(self, action: #selector(notificationSwitchChanged(_:)), for: .valueChanged)
+        
+        // Add neumorphic effect
+        schedulingContainer.addNeumorphicEffect(
+            cornerRadius: 15,
+            backgroundColor: themeManager.containerBackgroundColor
+        )
+    }
+    
+    private func createToggleRow(title: String, isOn: Bool) -> (container: UIView, label: UILabel, toggle: UISwitch) {
+        let container = UIView()
+        container.translatesAutoresizingMaskIntoConstraints = false
+        
+        let label = UILabel()
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.text = title
+        label.font = UIFont.systemFont(ofSize: 16)
+        label.textColor = themeManager.textColor
+        
+        let toggle = UISwitch()
+        toggle.translatesAutoresizingMaskIntoConstraints = false
+        toggle.isOn = isOn
+        toggle.onTintColor = themeManager.currentThemeColor
+        
+        container.addSubviews(label, toggle)
+        
+        label.anchor(
+            leading: container.leadingAnchor
+        )
+        label.centerY(in: container)
+        
+        toggle.anchor(
+            trailing: container.trailingAnchor
+        )
+        toggle.centerY(in: container)
+        
+        return (container, label, toggle)
+    }
+    
+    @objc private func calendarSwitchChanged(_ sender: UISwitch) {
+        if sender.isOn && !schedulingService.calendarIntegrationEnabled {
+            // Request calendar access if not already granted
+            schedulingService.requestCalendarAccess { [weak self] granted in
+                DispatchQueue.main.async {
+                    sender.isOn = granted
+                    self?.integrateWithCalendar = granted
+                    
+                    if !granted {
+                        self?.showPermissionAlert(for: "Calendar")
+                    }
+                }
+            }
+        } else {
+            integrateWithCalendar = sender.isOn
         }
     }
     
-    @objc private func keyboardWillHide(_ notification: Notification) {
-        // Reset content inset
-        scrollView.contentInset.bottom = 0
-        scrollView.scrollIndicatorInsets.bottom = 0
-        self.keyboardHeight = 0
+    @objc private func remindersSwitchChanged(_ sender: UISwitch) {
+        if sender.isOn && !schedulingService.reminderIntegrationEnabled {
+            // Request reminders access if not already granted
+            schedulingService.requestRemindersAccess { [weak self] granted in
+                DispatchQueue.main.async {
+                    sender.isOn = granted
+                    self?.integrateWithReminders = granted
+                    
+                    if !granted {
+                        self?.showPermissionAlert(for: "Reminders")
+                    }
+                }
+            }
+        } else {
+            integrateWithReminders = sender.isOn
+        }
     }
     
-    private func scrollToVisible(view: UIView) {
-        let rect = scrollView.convert(view.frame, from: view.superview)
-        let visibleRect = CGRect(
-            x: rect.origin.x,
-            y: rect.origin.y,
-            width: rect.width,
-            height: rect.height + 20 // Add some padding
+    @objc private func notificationSwitchChanged(_ sender: UISwitch) {
+        if sender.isOn && !schedulingService.notificationsEnabled {
+            // Request notification permission if not already granted
+            schedulingService.requestNotificationPermission { [weak self] granted in
+                DispatchQueue.main.async {
+                    sender.isOn = granted
+                    self?.enableNotifications = granted
+                    
+                    if !granted {
+                        self?.showPermissionAlert(for: "Notifications")
+                    }
+                }
+            }
+        } else {
+            enableNotifications = sender.isOn
+        }
+    }
+    
+    private func showPermissionAlert(for service: String) {
+        let alert = UIAlertController(
+            title: "\(service) Access Denied",
+            message: "Please enable \(service) access in Settings to use this feature.",
+            preferredStyle: .alert
         )
-        scrollView.scrollRectToVisible(visibleRect, animated: true)
+        
+        alert.addAction(UIAlertAction(title: "Settings", style: .default) { _ in
+            if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
+                UIApplication.shared.open(settingsURL)
+            }
+        })
+        
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        
+        present(alert, animated: true)
+    }
+    
+    @objc private func handleSchedulingPermissionsChanged() {
+        // Update switches based on current permissions
+        integrateWithCalendar = schedulingService.calendarIntegrationEnabled
+        integrateWithReminders = schedulingService.reminderIntegrationEnabled
+        enableNotifications = schedulingService.notificationsEnabled
+        
+        // Force layout refresh
+        view.setNeedsLayout()
     }
     
     private func applyThemeAndStyles() {
@@ -521,18 +788,22 @@ class AddTaskViewController: UIViewController {
             }
         }
         
-        // Apply new neumorphic effects
+        // Apply optimized styles to containers
         titleContainer.backgroundColor = themeManager.containerBackgroundColor
-        titleContainer.addNeumorphicEffect(
-            cornerRadius: 15,
-            backgroundColor: themeManager.containerBackgroundColor
-        )
+        titleContainer.layer.cornerRadius = 15
+        titleContainer.layer.shadowColor = UIColor.black.cgColor
+        titleContainer.layer.shadowOffset = CGSize(width: 2, height: 2)
+        titleContainer.layer.shadowOpacity = 0.1
+        titleContainer.layer.shadowRadius = 4
+        titleContainer.layer.shadowPath = UIBezierPath(roundedRect: titleContainer.bounds, cornerRadius: 15).cgPath
         
         detailsContainer.backgroundColor = themeManager.containerBackgroundColor
-        detailsContainer.addNeumorphicEffect(
-            cornerRadius: 15,
-            backgroundColor: themeManager.containerBackgroundColor
-        )
+        detailsContainer.layer.cornerRadius = 15
+        detailsContainer.layer.shadowColor = UIColor.black.cgColor
+        detailsContainer.layer.shadowOffset = CGSize(width: 2, height: 2)
+        detailsContainer.layer.shadowOpacity = 0.1
+        detailsContainer.layer.shadowRadius = 4
+        detailsContainer.layer.shadowPath = UIBezierPath(roundedRect: detailsContainer.bounds, cornerRadius: 15).cgPath
         
         // Update segmented control
         prioritySegmentedControl.backgroundColor = themeManager.containerBackgroundColor
@@ -547,118 +818,36 @@ class AddTaskViewController: UIViewController {
         let selectedPriorityColor = PriorityLevel(rawValue: Int16(prioritySegmentedControl.selectedSegmentIndex)) ?? .medium
         prioritySegmentedControl.selectedSegmentTintColor = selectedPriorityColor.color
         
-        // Apply neumorphic effects to buttons
+        // Apply optimized styles to buttons
         categoryButton.backgroundColor = themeManager.containerBackgroundColor
-        categoryButton.addNeumorphicEffect(
-            cornerRadius: 15,
-            backgroundColor: themeManager.containerBackgroundColor
-        )
+        categoryButton.layer.cornerRadius = 15
+        categoryButton.layer.shadowColor = UIColor.black.cgColor
+        categoryButton.layer.shadowOffset = CGSize(width: 2, height: 2)
+        categoryButton.layer.shadowOpacity = 0.1
+        categoryButton.layer.shadowRadius = 4
+        categoryButton.layer.shadowPath = UIBezierPath(roundedRect: categoryButton.bounds, cornerRadius: 15).cgPath
         
         dateButton.backgroundColor = themeManager.containerBackgroundColor
-        dateButton.addNeumorphicEffect(
-            cornerRadius: 15,
-            backgroundColor: themeManager.containerBackgroundColor
-        )
+        dateButton.layer.cornerRadius = 15
+        dateButton.layer.shadowColor = UIColor.black.cgColor
+        dateButton.layer.shadowOffset = CGSize(width: 2, height: 2)
+        dateButton.layer.shadowOpacity = 0.1
+        dateButton.layer.shadowRadius = 4
+        dateButton.layer.shadowPath = UIBezierPath(roundedRect: dateButton.bounds, cornerRadius: 15).cgPath
         
         // Update save button
         saveButton.backgroundColor = themeManager.currentThemeColor
         
-        // Refresh gradients
+        // Refresh save button appearance with optimized shadows
         updateSaveButtonAppearance()
     }
     
     @objc private func handleThemeChanged() {
-        // Use ThemeManager to update colors consistently
-        view.backgroundColor = themeManager.backgroundColor
+        // Apply the new theme with optimized rendering
+        applyThemeAndStyles()
         
-        // Update navigation bar
-        themeManager.applyThemeToNavigationBar(navigationController)
-        
-        // Update text field colors
-        titleTextField.textColor = themeManager.textColor
-        titleTextField.attributedPlaceholder = NSAttributedString(
-            string: titlePlaceholder,
-            attributes: [NSAttributedString.Key.foregroundColor: themeManager.secondaryTextColor]
-        )
-        
-        // Update text view based on state
-        if detailsTextView.text == detailsPlaceholder {
-            detailsTextView.textColor = themeManager.secondaryTextColor
-        } else {
-            detailsTextView.textColor = themeManager.textColor
-        }
-        
-        // Update labels
-        priorityLabel.textColor = themeManager.textColor
-        categoryLabel.textColor = themeManager.textColor
-        dateLabel.textColor = themeManager.textColor
-        
-        // Update buttons based on state
-        if categoryButton.title(for: .normal) == "Select category" {
-            categoryButton.setTitleColor(themeManager.secondaryTextColor, for: .normal)
-        } else {
-            categoryButton.setTitleColor(themeManager.textColor, for: .normal)
-        }
-        
-        if dateButton.title(for: .normal) == "Set date" {
-            dateButton.setTitleColor(themeManager.secondaryTextColor, for: .normal)
-        } else {
-            dateButton.setTitleColor(themeManager.textColor, for: .normal)
-        }
-        
-        // Clean up existing neumorphic effects
-        [titleContainer, detailsContainer, categoryButton, dateButton].forEach { view in
-            view.subviews.forEach { subview in
-                if subview.tag == 1001 || subview.tag == 1002 {
-                    subview.removeFromSuperview()
-                }
-            }
-        }
-        
-        // Apply new neumorphic effects
-        titleContainer.backgroundColor = themeManager.containerBackgroundColor
-        titleContainer.addNeumorphicEffect(
-            cornerRadius: 15,
-            backgroundColor: themeManager.containerBackgroundColor
-        )
-        
-        detailsContainer.backgroundColor = themeManager.containerBackgroundColor
-        detailsContainer.addNeumorphicEffect(
-            cornerRadius: 15,
-            backgroundColor: themeManager.containerBackgroundColor
-        )
-        
-        // Update segmented control
-        prioritySegmentedControl.backgroundColor = themeManager.containerBackgroundColor
-        prioritySegmentedControl.setTitleTextAttributes([
-            .foregroundColor: themeManager.secondaryTextColor
-        ], for: .normal)
-        prioritySegmentedControl.setTitleTextAttributes([
-            .foregroundColor: UIColor.white
-        ], for: .selected)
-        
-        // Set the background color of the selected segment
-        let selectedPriorityColor = PriorityLevel(rawValue: Int16(prioritySegmentedControl.selectedSegmentIndex)) ?? .medium
-        prioritySegmentedControl.selectedSegmentTintColor = selectedPriorityColor.color
-        
-        // Apply neumorphic effects to buttons
-        categoryButton.backgroundColor = themeManager.containerBackgroundColor
-        categoryButton.addNeumorphicEffect(
-            cornerRadius: 15,
-            backgroundColor: themeManager.containerBackgroundColor
-        )
-        
-        dateButton.backgroundColor = themeManager.containerBackgroundColor
-        dateButton.addNeumorphicEffect(
-            cornerRadius: 15,
-            backgroundColor: themeManager.containerBackgroundColor
-        )
-        
-        // Update save button
-        saveButton.backgroundColor = themeManager.currentThemeColor
-        
-        // Refresh gradients
-        updateSaveButtonAppearance()
+        // Force layout update to ensure shadow paths are correct
+        view.layoutIfNeeded()
     }
     
     // MARK: - Core Data
@@ -683,9 +872,13 @@ class AddTaskViewController: UIViewController {
         }
         
         let context = CoreDataManager.shared.viewContext
+        var createdTask: NSManagedObject? = nil
         
         // Create or update task
         if isEditingTask, let taskToEdit = taskToEdit {
+            // First remove any existing integrations
+            schedulingService.removeAllIntegrations(for: taskToEdit)
+            
             // Update existing task
             taskToEdit.setValue(title, forKey: "title")
             taskToEdit.setValue(
@@ -695,6 +888,8 @@ class AddTaskViewController: UIViewController {
             taskToEdit.setValue(selectedDate, forKey: "dueDate")
             taskToEdit.setValue(Int16(selectedPriority.rawValue), forKey: "priorityLevel")
             taskToEdit.setValue(selectedCategoryObject, forKey: "category")
+            
+            createdTask = taskToEdit
             
             // Notify delegate of update
             delegate?.didUpdateTask()
@@ -716,6 +911,8 @@ class AddTaskViewController: UIViewController {
             task.setValue(Int16(selectedPriority.rawValue), forKey: "priorityLevel")
             task.setValue(selectedCategoryObject, forKey: "category")
             
+            createdTask = task
+            
             // Notify delegate of new task
             delegate?.didAddNewTask()
         }
@@ -723,6 +920,59 @@ class AddTaskViewController: UIViewController {
         // Save context
         do {
             try context.save()
+            
+            // Create integrations if due date is set
+            if let task = createdTask, selectedDate != nil {
+                // Update scheduling service settings based on user choices
+                if integrateWithCalendar && !schedulingService.calendarIntegrationEnabled {
+                    schedulingService.toggleCalendarIntegration(true) { _ in }
+                }
+                
+                if integrateWithReminders && !schedulingService.reminderIntegrationEnabled {
+                    schedulingService.toggleReminderIntegration(true) { _ in }
+                }
+                
+                if enableNotifications && !schedulingService.notificationsEnabled {
+                    schedulingService.toggleNotifications(true) { _ in }
+                }
+                
+                // Set up integrations based on user choices
+                var activeIntegrations: [String: Bool] = [:]
+                
+                if integrateWithCalendar {
+                    activeIntegrations["calendar"] = true
+                }
+                
+                if integrateWithReminders {
+                    activeIntegrations["reminders"] = true
+                }
+                
+                if enableNotifications {
+                    activeIntegrations["notifications"] = true
+                }
+                
+                if !activeIntegrations.isEmpty {
+                    // Show loading indicator
+                    let loadingAlert = UIAlertController(title: "Setting Up Integrations", message: "Please wait...", preferredStyle: .alert)
+                    present(loadingAlert, animated: true)
+                    
+                    schedulingService.setupAllIntegrations(for: task) { success, messages in
+                        DispatchQueue.main.async {
+                            // Dismiss loading indicator
+                            loadingAlert.dismiss(animated: true) {
+                                // Show success/failure message if needed
+                                if !success && !messages.isEmpty {
+                                    self.showAlert(title: "Integration Issues", message: messages.joined(separator: "\n"))
+                                }
+                                
+                                // Dismiss the view controller
+                                self.dismiss(animated: true)
+                            }
+                        }
+                    }
+                    return // Early return to wait for completion
+                }
+            }
             
             // Add haptic feedback
             let generator = UINotificationFeedbackGenerator()
@@ -763,17 +1013,22 @@ class AddTaskViewController: UIViewController {
         // First dismiss keyboard if showing
         view.endEditing(true)
         
-        // Debugging
-        print("Category button tapped")
-        
-        // Fix common iPad crash
-        if UIDevice.current.userInterfaceIdiom == .pad {
-            // Create a simple UIMenu for iPad instead of action sheet
-            let menu = UIMenu(title: "Select Category", children: createCategoryMenuActions())
-            categoryButton.menu = menu
-            categoryButton.showsMenuAsPrimaryAction = true
-            return
+        // Add tap feedback animation
+        UIView.animate(withDuration: 0.1, animations: {
+            self.categoryButton.transform = CGAffineTransform(scaleX: 0.97, y: 0.97)
+            self.categoryButton.alpha = 0.8
+        }) { _ in
+            UIView.animate(withDuration: 0.1) {
+                self.categoryButton.transform = .identity
+                self.categoryButton.alpha = 1.0
+            }
         }
+        
+        // Add haptic feedback
+        let feedback = UIImpactFeedbackGenerator(style: .light)
+        feedback.impactOccurred()
+        
+        print("DEBUG: Category button tapped - presenting category selection")
         
         // Use cached categories or load them now
         var categories = self.cachedCategories
@@ -793,32 +1048,40 @@ class AddTaskViewController: UIViewController {
             return
         }
         
-        // Present alert controller
-        let alert = UIAlertController(title: "Select Category", message: nil, preferredStyle: .actionSheet)
+        // Create alert controller with appropriate style based on device
+        let alertStyle: UIAlertController.Style = UIDevice.current.userInterfaceIdiom == .pad ? .alert : .actionSheet
+        let alert = UIAlertController(title: "Select Category", message: nil, preferredStyle: alertStyle)
         
         // Add menu actions
         for category in categories {
             let action = UIAlertAction(title: category.name, style: .default) { [weak self] _ in
-                guard let self = self else { return }
-                self.selectCategory(name: category.name, object: category.object)
+                print("DEBUG: Selected category: \(category.name)")
+                self?.selectCategory(name: category.name, object: category.object)
             }
             alert.addAction(action)
         }
         
         // Add option to create a new category
         alert.addAction(UIAlertAction(title: "Create New Category", style: .default) { [weak self] _ in
+            print("DEBUG: Create new category selected")
             self?.presentCreateCategoryAlert()
         })
         
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
         
         // For iPad, set the source view for the popover
-        if let popoverController = alert.popoverPresentationController {
-            popoverController.sourceView = categoryButton
-            popoverController.sourceRect = categoryButton.bounds
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            if let popoverController = alert.popoverPresentationController {
+                popoverController.sourceView = categoryButton
+                popoverController.sourceRect = categoryButton.bounds
+                popoverController.permittedArrowDirections = .any
+            }
         }
         
-        present(alert, animated: true)
+        // Present the alert
+        present(alert, animated: true) {
+            print("DEBUG: Category selection presented successfully")
+        }
     }
     
     private func createCategoryMenuActions() -> [UIAction] {
@@ -897,93 +1160,42 @@ class AddTaskViewController: UIViewController {
     
     @objc private func dateButtonTapped() {
         // First dismiss keyboard if showing
+        print("DEBUG: Date button tapped - presenting date picker")
         view.endEditing(true)
         
-        // Debugging
-        print("Date button tapped")
+        // Add tap feedback animation
+        UIView.animate(withDuration: 0.1, animations: {
+            self.dateButton.transform = CGAffineTransform(scaleX: 0.97, y: 0.97)
+            self.dateButton.alpha = 0.8
+        }) { _ in
+            UIView.animate(withDuration: 0.1) {
+                self.dateButton.transform = .identity
+                self.dateButton.alpha = 1.0
+            }
+        }
+        
+        // Add haptic feedback
+        let feedback = UIImpactFeedbackGenerator(style: .light)
+        feedback.impactOccurred()
+        
+        
         
         // Show loading state with animation
         UIView.transition(with: dateButton, duration: 0.2, options: .transitionCrossDissolve, animations: {
             self.dateButton.setTitle("Opening date picker...", for: .normal)
         })
         
-        // Use direct date picker instead of modal view if having issues
-        if UIDevice.current.userInterfaceIdiom == .phone {
-            // Create an inline date picker
-            let datePicker = UIDatePicker()
-            datePicker.datePickerMode = .dateAndTime
-            datePicker.minimumDate = Date()
-            datePicker.date = selectedDate ?? Date()
-            
-            if #available(iOS 13.4, *) {
-                datePicker.preferredDatePickerStyle = .wheels
-            }
-            
-            // Create alert with date picker
-            let alert = UIAlertController(title: "Select Due Date", message: nil, preferredStyle: .actionSheet)
-            
-            // Add date picker to the alert
-            alert.view.addSubview(datePicker)
-            
-            // Configure date picker constraints
-            datePicker.translatesAutoresizingMaskIntoConstraints = false
-            datePicker.topAnchor.constraint(equalTo: alert.view.topAnchor, constant: 50).isActive = true
-            datePicker.leadingAnchor.constraint(equalTo: alert.view.leadingAnchor, constant: 0).isActive = true
-            datePicker.trailingAnchor.constraint(equalTo: alert.view.trailingAnchor, constant: 0).isActive = true
-            
-            // Set the alert height to accommodate the date picker
-            let height: NSLayoutConstraint = NSLayoutConstraint(
-                item: alert.view!, attribute: .height, relatedBy: .equal,
-                toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: 300
-            )
-            alert.view.addConstraint(height)
-            
-            // Add actions
-            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { _ in
-                // Reset button text
-                self.dateButton.setTitle(self.selectedDate == nil ? "Set date" : self.formatDate(self.selectedDate!), for: .normal)
-            }))
-            
-            alert.addAction(UIAlertAction(title: "Done", style: .default, handler: { _ in
-                // Update selected date
-                self.selectedDate = datePicker.date
-                
-                // Update button with animation
-                UIView.transition(with: self.dateButton, duration: 0.3, options: .transitionCrossDissolve, animations: {
-                    self.dateButton.setTitle(self.formatDate(datePicker.date), for: .normal)
-                    self.dateButton.setTitleColor(self.themeManager.textColor, for: .normal)
-                })
-                
-                // Add subtle haptic feedback
-                let generator = UISelectionFeedbackGenerator()
-                generator.selectionChanged()
-            }))
-            
-            // For iPad, set the source view for the popover
-            if let popoverController = alert.popoverPresentationController {
-                popoverController.sourceView = dateButton
-                popoverController.sourceRect = dateButton.bounds
-            }
-            
-            present(alert, animated: true)
-            return
-        }
-        
-        // Fallback to standard DatePickerViewController for iPad
+        // Create a date picker view controller for better UX
         let datePickerVC = DatePickerViewController()
         datePickerVC.delegate = self
         datePickerVC.initialDate = selectedDate ?? Date()
         
-        // Present date picker
         let navController = UINavigationController(rootViewController: datePickerVC)
         navController.modalPresentationStyle = .formSheet
-        
         present(navController, animated: true) {
-            // Reset button text if user dismisses without selecting
-            if self.dateButton.title(for: .normal) == "Opening date picker..." {
-                UIView.transition(with: self.dateButton, duration: 0.2, options: .transitionCrossDissolve, animations: {
-                    self.dateButton.setTitle(self.selectedDate == nil ? "Set date" : self.formatDate(self.selectedDate!), for: .normal)
-                })
+            // Reset button text if needed
+            if self.selectedDate == nil {
+                self.dateButton.setTitle("Set date", for: .normal)
             }
         }
     }
@@ -997,6 +1209,9 @@ class AddTaskViewController: UIViewController {
     }
     
     @objc private func saveButtonTapped() {
+        // First dismiss keyboard if showing
+        view.endEditing(true)
+        
         // Add animation
         UIView.animate(withDuration: 0.1, animations: {
             self.saveButton.transform = CGAffineTransform(scaleX: 0.95, y: 0.95)
@@ -1005,6 +1220,10 @@ class AddTaskViewController: UIViewController {
                 self.saveButton.transform = .identity
             }
         }
+        
+        // Add haptic feedback
+        let generator = UIImpactFeedbackGenerator(style: .medium)
+        generator.impactOccurred()
         
         // Save task to Core Data
         saveTask()
@@ -1062,6 +1281,33 @@ class AddTaskViewController: UIViewController {
         
         // Change the save button title
         saveButton.setTitle("Update Task", for: .normal)
+    }
+    
+    func preSelectCategory(_ category: NSManagedObject) {
+        // Pre-select the category for a new task
+        selectedCategoryObject = category
+        selectedCategory = category.value(forKey: "name") as? String
+        
+        // Make sure UI is updated when the view appears
+        let updateUI = { [weak self] in
+            guard let self = self else { return }
+            if let categoryName = self.selectedCategory {
+                UIView.transition(with: self.categoryButton, duration: 0.2, options: .transitionCrossDissolve, animations: {
+                    self.categoryButton.setTitle(categoryName, for: .normal)
+                    self.categoryButton.setTitleColor(self.themeManager.textColor, for: .normal)
+                })
+            }
+        }
+        
+        // If the view is already loaded, update immediately
+        if isViewLoaded {
+            updateUI()
+        } else {
+            // Otherwise, update when the view appears
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                updateUI()
+            }
+        }
     }
     
     private func presentCreateCategoryAlert() {
@@ -1136,19 +1382,25 @@ class AddTaskViewController: UIViewController {
     
     // Add this method to handle save button appearance consistently
     private func updateSaveButtonAppearance() {
-        // Update shadows
+        // Update shadows with shadowPath for better performance
         saveButton.layer.shadowColor = UIColor.black.cgColor
         saveButton.layer.shadowOffset = CGSize(width: 4, height: 4)
-        saveButton.layer.shadowOpacity = 0.2
+        saveButton.layer.shadowOpacity = 0.3
         saveButton.layer.shadowRadius = 5
+        
+        // Create explicit shadowPath for better performance
+        if saveButton.bounds.size != .zero {
+            let shadowPath = UIBezierPath(roundedRect: saveButton.bounds, cornerRadius: saveButton.layer.cornerRadius)
+            saveButton.layer.shadowPath = shadowPath.cgPath
+        }
         
         // Remove existing inner glow if any
         saveButton.layer.sublayers?.removeAll(where: { $0 is CAGradientLayer })
         
         // Add inner highlight
         let innerGlow = CAGradientLayer()
-        innerGlow.frame = CGRect(x: 0, y: 0, width: saveButton.bounds.width, height: saveButton.bounds.height)
-        innerGlow.cornerRadius = 25
+        innerGlow.frame = saveButton.bounds
+        innerGlow.cornerRadius = saveButton.layer.cornerRadius
         innerGlow.colors = [
             UIColor.white.withAlphaComponent(0.5).cgColor,
             UIColor.clear.cgColor
@@ -1160,6 +1412,181 @@ class AddTaskViewController: UIViewController {
         // Add new inner glow
         saveButton.layer.insertSublayer(innerGlow, at: 0)
     }
+    
+    private func setupSaveButton() {
+        contentView.addSubview(saveButton)
+        
+        saveButton.anchor(
+            top: contentView.subviews.last?.bottomAnchor ?? dateButton.bottomAnchor,
+            leading: contentView.leadingAnchor,
+            trailing: contentView.trailingAnchor,
+            paddingTop: 40,
+            paddingLeading: 20,
+            paddingTrailing: 20,
+            height: 60
+        )
+        
+        // Add bottom constraint with padding
+        saveButton.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -40).isActive = true
+        
+        // Make the button more easily tappable
+        saveButton.isUserInteractionEnabled = true
+        saveButton.layer.cornerRadius = 30
+        
+        // Add target action
+        saveButton.addTarget(self, action: #selector(saveButtonTapped), for: .touchUpInside)
+    }
+    
+    private func setupGestureRecognizers() {
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
+        tapGesture.cancelsTouchesInView = false
+        view.addGestureRecognizer(tapGesture)
+    }
+    
+    private func setupTextViewDelegate() {
+        detailsTextView.delegate = self
+    }
+    
+    private func setupKeyboardObservers() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(keyboardWillShow),
+            name: UIResponder.keyboardWillShowNotification,
+            object: nil
+        )
+        
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(keyboardWillHide),
+            name: UIResponder.keyboardWillHideNotification,
+            object: nil
+        )
+    }
+    
+    @objc private func keyboardWillShow(_ notification: Notification) {
+        guard let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else {
+            return
+        }
+        
+        let keyboardHeight = keyboardFrame.height
+        self.keyboardHeight = keyboardHeight
+        
+        // Adjust scroll view insets using modern API
+        scrollView.contentInset.bottom = keyboardHeight + 20 // Add extra padding
+        
+        // Use modern APIs for scrollIndicatorInsets
+        if #available(iOS 13.0, *) {
+            scrollView.verticalScrollIndicatorInsets.bottom = keyboardHeight + 20
+        } else {
+            // Fallback for iOS 12 and earlier
+            scrollView.scrollIndicatorInsets.bottom = keyboardHeight + 20
+        }
+        
+        // Find which view is active
+        var activeView: UIView?
+        if titleTextField.isFirstResponder {
+            activeView = titleContainer
+        } else if detailsTextView.isFirstResponder {
+            activeView = detailsContainer
+        }
+        
+        // If we found an active view, scroll to it
+        if let activeView = activeView {
+            // Calculate the position of the view in the scroll view
+            let rect = scrollView.convert(activeView.frame, from: activeView.superview)
+            
+            // Create a rect that includes the view and some padding
+            let visibleRect = CGRect(
+                x: rect.origin.x,
+                y: rect.origin.y,
+                width: rect.width,
+                height: rect.height + 40 // Add more padding
+            )
+            
+            // Calculate if the keyboard would cover this view
+            let frameInWindow = activeView.convert(activeView.bounds, to: nil)
+            let keyboardTop = UIScreen.main.bounds.height - keyboardHeight
+            
+            if frameInWindow.maxY > keyboardTop {
+                // Scroll to make the view visible above the keyboard
+                scrollView.scrollRectToVisible(visibleRect, animated: true)
+            }
+        }
+    }
+    
+    @objc private func keyboardWillHide(_ notification: Notification) {
+        // Reset content inset
+        scrollView.contentInset.bottom = 0
+        
+        // Use modern APIs for scrollIndicatorInsets
+        if #available(iOS 13.0, *) {
+            scrollView.verticalScrollIndicatorInsets.bottom = 0
+        } else {
+            // Fallback for iOS 12 and earlier
+            scrollView.scrollIndicatorInsets.bottom = 0
+        }
+        
+        self.keyboardHeight = 0
+    }
+    
+    // Helper method to recalculate content size
+    private func recalculateScrollViewContentSize() {
+        // Find the bottom-most view in the contentView
+        var maxY: CGFloat = 0
+        
+        for subview in contentView.subviews {
+            let subviewMaxY = subview.frame.maxY
+            if subviewMaxY > maxY {
+                maxY = subviewMaxY
+            }
+        }
+        
+        // Add extra padding to ensure the save button is well above the bottom
+        maxY += 100
+        
+        // Ensure content size is at least as tall as the scrollView frame plus extra
+        let minHeight = scrollView.frame.height + 200
+        let newHeight = max(maxY, minHeight)
+        
+        // Update content size
+        scrollView.contentSize = CGSize(width: scrollView.bounds.width, height: newHeight)
+        
+        // Always enable scrolling
+        scrollView.isScrollEnabled = true
+        
+        print("DEBUG: ScrollView content size updated to height: \(newHeight)")
+    }
+    
+    // Helper function to improve logging for debugging
+    private func logViewHierarchy() {
+        print("DEBUG: Scrollview frame: \(scrollView.frame), contentSize: \(scrollView.contentSize)")
+        print("DEBUG: ContentView frame: \(contentView.frame)")
+        
+        // Log all contentView subviews
+        for (index, subview) in contentView.subviews.enumerated() {
+            print("DEBUG: Subview \(index): \(type(of: subview)), frame: \(subview.frame)")
+        }
+    }
+    
+    // Function to enable/disable scrolling (useful for debugging)
+    private func setScrollingEnabled(_ enabled: Bool) {
+        scrollView.isScrollEnabled = enabled
+        if enabled {
+            print("DEBUG: Scrolling enabled")
+        } else {
+            print("DEBUG: Scrolling disabled")
+        }
+    }
+    
+    override func viewWillLayoutSubviews() {
+        super.viewWillLayoutSubviews()
+        
+        // Ensure proper size after rotation or initial layout
+        DispatchQueue.main.async {
+            self.recalculateScrollViewContentSize()
+        }
+    }
+
 }
 
 // MARK: - UITextViewDelegate
@@ -1195,3 +1622,5 @@ extension AddTaskViewController: DatePickerViewControllerDelegate {
         generator.selectionChanged()
     }
 }
+
+// Override viewWillLayoutSubviews to ensure proper content sizing

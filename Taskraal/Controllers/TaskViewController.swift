@@ -7,6 +7,7 @@
 
 import UIKit
 import CoreData
+import EventKit
 
 class TasksViewController: UIViewController {
     
@@ -15,6 +16,7 @@ class TasksViewController: UIViewController {
     private var tasks: [NSManagedObject] = []
     private var filteredTasks: [NSManagedObject] = []
     private var isSearching: Bool = false
+    private let schedulingService = SchedulingService.shared
     
     // MARK: - UI Elements
     private let tableView: UITableView = {
@@ -89,9 +91,6 @@ class TasksViewController: UIViewController {
     private let emptyStateLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.text = "No tasks yet\nTap + to add your first task"
-        label.numberOfLines = 0
-        label.textAlignment = .center
         label.font = UIFont.systemFont(ofSize: 18, weight: .medium)
         label.textColor = UIColor(red: 160/255, green: 170/255, blue: 180/255, alpha: 1.0)
         return label
@@ -100,10 +99,6 @@ class TasksViewController: UIViewController {
     private let addButton: UIButton = {
         let button = UIButton()
         button.translatesAutoresizingMaskIntoConstraints = false
-        button.backgroundColor = UIColor(red: 94/255, green: 132/255, blue: 226/255, alpha: 1.0) // Accent color
-        button.setImage(UIImage(systemName: "plus"), for: .normal)
-        button.tintColor = .white
-        button.layer.cornerRadius = 28
         return button
     }()
     
@@ -137,6 +132,21 @@ class TasksViewController: UIViewController {
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         applyThemeAndStyles()
+        
+        // Update shadow paths when layout changes
+        if addButton.bounds.size != .zero {
+            addButton.layer.shadowPath = UIBezierPath(roundedRect: addButton.bounds, cornerRadius: 28).cgPath
+            
+            // Update gradient layer if it exists
+            if let innerGlow = addButton.layer.sublayers?.first as? CAGradientLayer {
+                innerGlow.frame = addButton.bounds
+                innerGlow.cornerRadius = 28
+            }
+        }
+        
+        if mainContainerView.bounds.size != .zero {
+            mainContainerView.layer.shadowPath = UIBezierPath(roundedRect: mainContainerView.bounds, cornerRadius: 25).cgPath
+        }
     }
     
     override func viewDidAppear(_ animated: Bool) {
@@ -248,9 +258,17 @@ class TasksViewController: UIViewController {
         tableView.register(TaskCell.self, forCellReuseIdentifier: TaskCell.identifier)
         tableView.delegate = self
         tableView.dataSource = self
-        tableView.rowHeight = 100
+        
+        // Set explicit row height to avoid ambiguity
+        tableView.rowHeight = UITableView.automaticDimension
+        tableView.estimatedRowHeight = 100
+        
         tableView.backgroundColor = themeManager.backgroundColor
         tableView.separatorStyle = .none
+        
+        // Extra settings to avoid ambiguous content size
+        tableView.alwaysBounceVertical = true
+        tableView.contentInsetAdjustmentBehavior = .automatic
     }
     
     private func setupEmptyState() {
@@ -274,10 +292,18 @@ class TasksViewController: UIViewController {
         emptyStateLabel.anchor(
             top: emptyStateImageView.bottomAnchor,
             leading: emptyStateView.leadingAnchor,
+            bottom: emptyStateView.bottomAnchor,
             trailing: emptyStateView.trailingAnchor,
-            paddingTop: 16
+            paddingTop: 16,
+            paddingBottom: 16
         )
         emptyStateLabel.centerX(in: emptyStateView)
+        
+        // Set a preferred content size for the label text
+        emptyStateLabel.text = "No tasks yet\nTap + to add your first task"
+        emptyStateLabel.numberOfLines = 0
+        emptyStateLabel.textAlignment = .center
+        emptyStateLabel.sizeToFit()
         
         // Set colors
         emptyStateImageView.tintColor = themeManager.secondaryTextColor.withAlphaComponent(0.5)
@@ -295,7 +321,22 @@ class TasksViewController: UIViewController {
             height: 56
         )
         
-        addButton.backgroundColor = themeManager.currentThemeColor
+        // Configure the button using modern API when available
+        if #available(iOS 15.0, *) {
+            var config = UIButton.Configuration.plain()
+            config.image = UIImage(systemName: "plus")
+            config.baseForegroundColor = .white
+            config.background.backgroundColor = themeManager.currentThemeColor
+            config.cornerStyle = .capsule
+            addButton.configuration = config
+        } else {
+            // Fallback for iOS 14 and earlier
+            addButton.backgroundColor = themeManager.currentThemeColor
+            addButton.setImage(UIImage(systemName: "plus"), for: .normal)
+            addButton.tintColor = .white
+            addButton.layer.cornerRadius = 28
+        }
+        
         addButton.addTarget(self, action: #selector(addTaskTapped), for: .touchUpInside)
     }
     
@@ -329,13 +370,22 @@ class TasksViewController: UIViewController {
         
         // Update main container with proper background color
         mainContainerView.backgroundColor = themeManager.containerBackgroundColor
+        mainContainerView.layer.cornerRadius = 25
         
-        // Make sure shadows are only applied once the view has a valid frame
+        // Apply shadow with explicit path for better performance
         if mainContainerView.bounds.width > 0 && mainContainerView.bounds.height > 0 {
-            mainContainerView.addNeumorphicEffect(
-                cornerRadius: 25,
-                backgroundColor: themeManager.containerBackgroundColor
-            )
+            mainContainerView.layer.shadowColor = UIColor.black.cgColor
+            mainContainerView.layer.shadowOffset = CGSize(width: 2, height: 2)
+            mainContainerView.layer.shadowOpacity = 0.1
+            mainContainerView.layer.shadowRadius = 4
+            mainContainerView.layer.shadowPath = UIBezierPath(roundedRect: mainContainerView.bounds, cornerRadius: 25).cgPath
+            
+            // Clean up old shadow layers
+            for subview in mainContainerView.subviews {
+                if subview.tag == 1001 || subview.tag == 1002 {
+                    subview.removeFromSuperview()
+                }
+            }
         }
         
         // Update header and text colors
@@ -356,48 +406,80 @@ class TasksViewController: UIViewController {
         
         // Update add button
         updateAddButtonAppearance()
+        
+        // Ensure the table content size is explicitly set to avoid ambiguity
+        tableView.contentSize = CGSize(width: tableView.bounds.width, height: max(tableView.contentSize.height, 1))
+    }
+    
+    private func updateAddButtonAppearance() {
+        // Update add button appearance based on iOS version
+        if #available(iOS 15.0, *) {
+            // For iOS 15+ use configuration
+            guard var config = addButton.configuration else {
+                // Create configuration if it doesn't exist
+                var newConfig = UIButton.Configuration.plain()
+                newConfig.image = UIImage(systemName: "plus")
+                newConfig.baseForegroundColor = .white
+                newConfig.background.backgroundColor = themeManager.currentThemeColor
+                newConfig.cornerStyle = .capsule
+                addButton.configuration = newConfig
+                return
+            }
+            
+            // Update existing configuration
+            config.background.backgroundColor = themeManager.currentThemeColor
+            addButton.configuration = config
+            
+            // Add shadow directly to layer
+            addButton.layer.shadowColor = UIColor.black.cgColor
+            addButton.layer.shadowOffset = CGSize(width: 4, height: 4)
+            addButton.layer.shadowOpacity = 0.3
+            addButton.layer.shadowRadius = 5
+            if addButton.bounds.size != .zero {
+                addButton.layer.shadowPath = UIBezierPath(roundedRect: addButton.bounds, cornerRadius: 28).cgPath
+            }
+        } else {
+            // For iOS 14 and earlier
+            addButton.backgroundColor = themeManager.currentThemeColor
+            
+            // Remove existing gradient layers
+            addButton.layer.sublayers?.removeAll(where: { $0 is CAGradientLayer })
+            
+            // Set up shadow with explicit path
+            addButton.layer.shadowColor = UIColor.black.cgColor
+            addButton.layer.shadowOffset = CGSize(width: 4, height: 4)
+            addButton.layer.shadowOpacity = 0.3
+            addButton.layer.shadowRadius = 5
+            if addButton.bounds.size != .zero {
+                addButton.layer.shadowPath = UIBezierPath(roundedRect: addButton.bounds, cornerRadius: 28).cgPath
+            }
+            
+            // Add inner highlight using a simpler approach to avoid CAShapeLayer
+            let innerGlow = CAGradientLayer()
+            innerGlow.frame = addButton.bounds
+            innerGlow.cornerRadius = 28
+            innerGlow.colors = [
+                UIColor.white.withAlphaComponent(0.5).cgColor,
+                UIColor.clear.cgColor
+            ]
+            innerGlow.startPoint = CGPoint(x: 0, y: 0)
+            innerGlow.endPoint = CGPoint(x: 1, y: 1)
+            innerGlow.locations = [0.0, 0.5]
+            
+            // Add new inner glow
+            addButton.layer.insertSublayer(innerGlow, at: 0)
+        }
+        
+        // Update refresh control color
+        refreshControl.tintColor = themeManager.currentThemeColor
     }
     
     @objc private func handleThemeChanged() {
         // Use ThemeManager to update navigation bar
         themeManager.applyThemeToNavigationBar(navigationController)
         
-        // Update basic colors right away
-        view.backgroundColor = themeManager.backgroundColor
-        tableView.backgroundColor = themeManager.backgroundColor
-        mainContainerView.backgroundColor = themeManager.containerBackgroundColor
-        
-        // Update text elements
-        headerLabel.textColor = themeManager.textColor
-        taskCountLabel.textColor = themeManager.secondaryTextColor
-        searchIconView.tintColor = themeManager.secondaryTextColor
-        searchTextField.textColor = themeManager.textColor
-        searchTextField.attributedPlaceholder = NSAttributedString(
-            string: "Search tasks...",
-            attributes: [NSAttributedString.Key.foregroundColor: themeManager.secondaryTextColor]
-        )
-        
-        // Update empty state
-        emptyStateImageView.tintColor = themeManager.secondaryTextColor.withAlphaComponent(0.5)
-        emptyStateLabel.textColor = themeManager.secondaryTextColor
-        
-        // Update add button
-        addButton.backgroundColor = themeManager.currentThemeColor
-        
-        // Clean up neumorphic effects before reapplying
-        mainContainerView.subviews.forEach { subview in
-            if subview.tag == 1001 || subview.tag == 1002 {
-                subview.removeFromSuperview()
-            }
-        }
-        
-        // Apply neumorphic effect
-        if mainContainerView.bounds.width > 0 {
-            mainContainerView.addNeumorphicEffect(
-                cornerRadius: 25,
-                backgroundColor: themeManager.containerBackgroundColor
-            )
-        }
+        // Update all styling through a single method
+        applyThemeAndStyles()
         
         // Force a complete reload of the table view
         tableView.reloadData()
@@ -410,37 +492,6 @@ class TasksViewController: UIViewController {
                 taskCell.layoutIfNeeded()
             }
         }
-    }
-    
-    private func updateAddButtonAppearance() {
-        // Update add button with batched changes
-        addButton.backgroundColor = themeManager.currentThemeColor
-        
-        // Remove existing gradient layers
-        addButton.layer.sublayers?.removeAll(where: { $0 is CAGradientLayer })
-        
-        // Apply inner highlight to add button
-        let innerGlow = CAGradientLayer()
-        innerGlow.frame = addButton.bounds
-        innerGlow.cornerRadius = 28
-        innerGlow.colors = [
-            UIColor.white.withAlphaComponent(0.5).cgColor,
-            UIColor.clear.cgColor
-        ]
-        innerGlow.startPoint = CGPoint(x: 0, y: 0)
-        innerGlow.endPoint = CGPoint(x: 1, y: 1)
-        innerGlow.locations = [0.0, 0.5]
-        
-        addButton.layer.insertSublayer(innerGlow, at: 0)
-        
-        // Update shadows with batched changes
-        addButton.layer.shadowColor = UIColor.black.cgColor
-        addButton.layer.shadowOffset = CGSize(width: 4, height: 4)
-        addButton.layer.shadowOpacity = 0.3
-        addButton.layer.shadowRadius = 5
-        
-        // Update refresh control color
-        refreshControl.tintColor = themeManager.currentThemeColor
     }
     
     // MARK: - Actions
@@ -537,6 +588,9 @@ class TasksViewController: UIViewController {
         // Get the task to delete
         let taskToDelete = isSearching ? filteredTasks[indexPath.row] : tasks[indexPath.row]
         
+        // Remove any scheduling integrations
+        schedulingService.removeAllIntegrations(for: taskToDelete)
+        
         // Delete the task
         context.delete(taskToDelete)
         
@@ -584,6 +638,17 @@ class TasksViewController: UIViewController {
         // Toggle completion status
         let currentValue = taskToUpdate.value(forKey: "isCompleted") as? Bool ?? false
         taskToUpdate.setValue(!currentValue, forKey: "isCompleted")
+        
+        // Handle scheduling integrations based on completion state
+        if !currentValue == true {
+            // Task is being marked as completed, remove all integrations
+            schedulingService.removeAllIntegrations(for: taskToUpdate)
+        } else {
+            // Task is being marked as incomplete, recreate integrations if it has a due date
+            if let dueDate = taskToUpdate.value(forKey: "dueDate") as? Date, dueDate > Date() {
+                schedulingService.setupAllIntegrations(for: taskToUpdate) { _, _ in }
+            }
+        }
         
         // Save the context
         do {

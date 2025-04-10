@@ -12,6 +12,7 @@ class SettingsViewController: UIViewController {
     
     // MARK: - Properties
     private let themeManager = ThemeManager.shared
+    private let schedulingService = SchedulingService.shared
     
     // Settings state
     private var isDarkModeEnabled = false
@@ -245,12 +246,84 @@ class SettingsViewController: UIViewController {
         view.setNeedsLayout()
         view.layoutIfNeeded()
     }
+    
+    private func showCalendarSelectionAlert() {
+        // First get available calendars
+        let calendars = schedulingService.fetchAvailableCalendars()
+        
+        guard !calendars.isEmpty else {
+            showAlert(title: "No Calendars Available", message: "You don't have any editable calendars.")
+            return
+        }
+        
+        let alert = UIAlertController(title: "Select Calendar", message: "Choose a calendar for your tasks", preferredStyle: .actionSheet)
+        
+        // Add each calendar as an option
+        for calendar in calendars {
+            let action = UIAlertAction(title: calendar.title, style: .default) { [weak self] _ in
+                self?.schedulingService.setSelectedCalendar(identifier: calendar.calendarIdentifier)
+                self?.tableView.reloadData()
+            }
+            alert.addAction(action)
+        }
+        
+        // Add a cancel action
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        
+        // For iPad, set the source view for the popover
+        if let popoverController = alert.popoverPresentationController {
+            popoverController.sourceView = view
+            popoverController.sourceRect = CGRect(x: view.bounds.midX, y: view.bounds.midY, width: 0, height: 0)
+            popoverController.permittedArrowDirections = []
+        }
+        
+        present(alert, animated: true)
+    }
+    
+    private func showReminderListSelectionAlert() {
+        // First get available reminder lists
+        let reminderLists = schedulingService.fetchAvailableReminderLists()
+        
+        guard !reminderLists.isEmpty else {
+            showAlert(title: "No Reminder Lists Available", message: "You don't have any reminder lists.")
+            return
+        }
+        
+        let alert = UIAlertController(title: "Select Reminder List", message: "Choose a list for your task reminders", preferredStyle: .actionSheet)
+        
+        // Add each reminder list as an option
+        for list in reminderLists {
+            let action = UIAlertAction(title: list.title, style: .default) { [weak self] _ in
+                self?.schedulingService.setReminderList(identifier: list.calendarIdentifier)
+                self?.tableView.reloadData()
+            }
+            alert.addAction(action)
+        }
+        
+        // Add a cancel action
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        
+        // For iPad, set the source view for the popover
+        if let popoverController = alert.popoverPresentationController {
+            popoverController.sourceView = view
+            popoverController.sourceRect = CGRect(x: view.bounds.midX, y: view.bounds.midY, width: 0, height: 0)
+            popoverController.permittedArrowDirections = []
+        }
+        
+        present(alert, animated: true)
+    }
+    
+    private func showAlert(title: String, message: String) {
+        let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        present(alert, animated: true)
+    }
 }
 
 // MARK: - UITableViewDelegate & UITableViewDataSource
 extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
     func numberOfSections(in tableView: UITableView) -> Int {
-        return 3
+        return 4
     }
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -258,6 +331,7 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
         case 0: return 1  // Only Dark Mode in Appearance section
         case 1: return 2  // Notification settings
         case 2: return 1  // About
+        case 3: return 2  // Calendar and Reminder list selection
         default: return 0
         }
     }
@@ -275,6 +349,7 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
         case 0: titleLabel.text = "Appearance"
         case 1: titleLabel.text = "Notifications"
         case 2: titleLabel.text = "About"
+        case 3: titleLabel.text = "Scheduling"
         default: break
         }
         
@@ -324,6 +399,38 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
             cell.configure(with: "Version 1.0")
             return cell
             
+        case 3: // Scheduling settings section
+            switch indexPath.row {
+            case 0: // Calendar selection
+                let cell = tableView.dequeueReusableCell(withIdentifier: SettingSelectCell.identifier, for: indexPath) as! SettingSelectCell
+                
+                // Get selected calendar name
+                var calendarName = "Default Calendar"
+                if let calendarId = schedulingService.selectedCalendarIdentifier,
+                   let calendar = schedulingService.fetchAvailableCalendars().first(where: { $0.calendarIdentifier == calendarId }) {
+                    calendarName = calendar.title
+                }
+                
+                cell.configure(with: "Calendar", value: calendarName, indicatorColor: .systemBlue)
+                return cell
+                
+            case 1: // Reminder list selection
+                let cell = tableView.dequeueReusableCell(withIdentifier: SettingSelectCell.identifier, for: indexPath) as! SettingSelectCell
+                
+                // Get selected reminder list name
+                var listName = "Default List"
+                if let listId = schedulingService.reminderListIdentifier,
+                   let list = schedulingService.fetchAvailableReminderLists().first(where: { $0.calendarIdentifier == listId }) {
+                    listName = list.title
+                }
+                
+                cell.configure(with: "Reminder List", value: listName, indicatorColor: .systemOrange)
+                return cell
+                
+            default:
+                return UITableViewCell()
+            }
+            
         default:
             return UITableViewCell()
         }
@@ -337,9 +444,24 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
         generator.impactOccurred()
         
         // Handle cell selection
-        if indexPath.section == 2 {
+        switch indexPath.section {
+        case 2:
             // About app
             showAboutInfo()
+        case 3:
+            // Scheduling settings
+            switch indexPath.row {
+            case 0:
+                // Calendar selection
+                showCalendarSelectionAlert()
+            case 1:
+                // Reminder list selection
+                showReminderListSelectionAlert()
+            default:
+                break
+            }
+        default:
+            break
         }
     }
 }

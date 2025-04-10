@@ -6,12 +6,13 @@
 //
 
 import UIKit
+import CoreData
 
 class CategoriesViewController: UIViewController {
     
     // MARK: - Properties
     private let themeManager = ThemeManager.shared
-    private var mockCategories: [(name: String, color: UIColor, taskCount: Int)] = []
+    private var categories: [NSManagedObject] = []
     
     // MARK: - UI Elements
     private let tableView: UITableView = {
@@ -60,7 +61,7 @@ class CategoriesViewController: UIViewController {
         setupHeader()
         setupTableView()
         setupAddButton()
-        createMockData()
+        setupNotificationObservers()
         
         // Listen for theme changes
         NotificationCenter.default.addObserver(
@@ -69,6 +70,11 @@ class CategoriesViewController: UIViewController {
             name: ThemeManager.themeChangedNotification,
             object: nil
         )
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        fetchCategories()
     }
     
     deinit {
@@ -147,6 +153,16 @@ class CategoriesViewController: UIViewController {
         addButton.addTarget(self, action: #selector(addCategoryTapped), for: .touchUpInside)
     }
     
+    private func setupNotificationObservers() {
+        // Listen for task data changes to update category task counts
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleTaskDataChanged),
+            name: NSNotification.Name("TaskDataChanged"),
+            object: nil
+        )
+    }
+    
     private func applyThemeAndStyles() {
         // Update view colors
         view.backgroundColor = themeManager.backgroundColor
@@ -193,6 +209,11 @@ class CategoriesViewController: UIViewController {
         tableView.reloadData()
     }
     
+    @objc private func handleTaskDataChanged() {
+        // Refresh category task counts
+        fetchCategories()
+    }
+    
     // MARK: - Actions
     @objc private func addCategoryTapped() {
         // Add animation
@@ -221,8 +242,15 @@ class CategoriesViewController: UIViewController {
         }
         
         // Add color selection options
-        let colorOptions = [UIColor.systemBlue, UIColor.systemGreen, UIColor.systemOrange,
-                           UIColor.systemPurple, UIColor.systemPink, UIColor.systemTeal]
+        let colorOptions = [
+            ("Blue", "#0A84FF"),
+            ("Green", "#32D74B"),
+            ("Orange", "#FF9F0A"),
+            ("Red", "#FF3B30"),
+            ("Purple", "#BF5AF2"),
+            ("Teal", "#64D2FF"),
+            ("Pink", "#FF2D55")
+        ]
         
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
         
@@ -233,45 +261,47 @@ class CategoriesViewController: UIViewController {
                   !categoryName.isEmpty else { return }
             
             // Use a random color for now (in a real app, you'd allow selection)
-            let randomColor = colorOptions.randomElement() ?? .systemBlue
+            let randomColorHex = colorOptions.randomElement()?.1 ?? "#0A84FF"
             
-            // Add the new category to the mock data
-            self.mockCategories.append((name: categoryName, color: randomColor, taskCount: 0))
-            
-            // Update UI
-            self.categoryCountLabel.text = "\(self.mockCategories.count) categories"
-            self.tableView.reloadData()
-            
-            // Add success feedback
-            let successGenerator = UINotificationFeedbackGenerator()
-            successGenerator.notificationOccurred(.success)
+            // Create category in Core Data
+            if let _ = CoreDataManager.shared.createCategory(name: categoryName, colorHex: randomColorHex) {
+                // Refresh categories
+                self.fetchCategories()
+                
+                // Add success feedback
+                let successGenerator = UINotificationFeedbackGenerator()
+                successGenerator.notificationOccurred(.success)
+            }
         })
         
         present(alert, animated: true)
     }
     
-    // MARK: - Data
-    private func createMockData() {
-        // Create some sample categories
-        mockCategories = [
-            ("Work", UIColor.systemBlue, 5),
-            ("Personal", UIColor.systemGreen, 3),
-            ("Shopping", UIColor.systemOrange, 2),
-            ("Health", UIColor.systemRed, 1),
-            ("Education", UIColor.systemPurple, 4)
-        ]
+    // MARK: - Core Data
+    private func fetchCategories() {
+        // Use CoreDataManager to fetch categories
+        categories = CoreDataManager.shared.fetchCategories()
         
         // Update category count label
-        categoryCountLabel.text = "\(mockCategories.count) categories"
+        categoryCountLabel.text = "\(categories.count) categories"
         
+        // Reload table view
         tableView.reloadData()
+    }
+    
+    private func getTaskCount(for category: NSManagedObject) -> Int {
+        // Create a predicate to count tasks for this category
+        let predicate = NSPredicate(format: "category == %@", category)
+        
+        // Use CoreDataManager to count tasks
+        return CoreDataManager.shared.count(for: "Task", predicate: predicate)
     }
 }
 
 // MARK: - UITableViewDelegate & UITableViewDataSource
 extension CategoriesViewController: UITableViewDelegate, UITableViewDataSource {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return mockCategories.count
+        return categories.count
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
@@ -279,15 +309,134 @@ extension CategoriesViewController: UITableViewDelegate, UITableViewDataSource {
             return UITableViewCell()
         }
         
-        let category = mockCategories[indexPath.row]
-        cell.configure(with: category.name, color: category.color, taskCount: category.taskCount)
+        let category = categories[indexPath.row]
+        
+        // Get category properties from Core Data object
+        let name = category.value(forKey: "name") as? String ?? "Unnamed"
+        let colorHex = category.value(forKey: "colorHex") as? String ?? "#0A84FF"
+        let color = UIColor.fromHex(colorHex) ?? .systemBlue
+        
+        // Get task count for this category
+        let taskCount = getTaskCount(for: category)
+        
+        cell.configure(with: name, color: color, taskCount: taskCount)
         
         return cell
     }
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        print("Selected category at index \(indexPath.row)")
-        // This will be implemented later to show tasks in this category
+        // Get the selected category object
+        let selectedCategory = categories[indexPath.row]
+        
+        // Create and configure the detail view controller with Core Data object
+        let categoryDetailVC = CategoryDetailViewController(categoryObject: selectedCategory)
+        
+        // Push the detail view controller onto the navigation stack
+        navigationController?.pushViewController(categoryDetailVC, animated: true)
+    }
+    
+    func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
+        // Get the category
+        let category = categories[indexPath.row]
+        
+        // Delete action
+        let deleteAction = UIContextualAction(style: .destructive, title: nil) { [weak self] (_, _, completion) in
+            guard let self = self else { return }
+            
+            // Show delete confirmation
+            self.confirmDeleteCategory(category) {
+                // Refresh categories
+                self.fetchCategories()
+                completion(true)
+            }
+        }
+        
+        // Configure delete action
+        deleteAction.image = UIImage(systemName: "trash")
+        deleteAction.backgroundColor = .systemRed
+        
+        // Edit action
+        let editAction = UIContextualAction(style: .normal, title: nil) { [weak self] (_, _, completion) in
+            self?.presentEditCategoryAlert(for: category)
+            completion(true)
+        }
+        
+        // Configure edit action
+        editAction.image = UIImage(systemName: "pencil")
+        editAction.backgroundColor = .systemBlue
+        
+        return UISwipeActionsConfiguration(actions: [deleteAction, editAction])
+    }
+    
+    private func confirmDeleteCategory(_ category: NSManagedObject, completion: @escaping () -> Void) {
+        // Get category name
+        let categoryName = category.value(forKey: "name") as? String ?? "this category"
+        
+        let alert = UIAlertController(
+            title: "Delete \(categoryName)?",
+            message: "This will also delete all tasks in this category. This cannot be undone.",
+            preferredStyle: .alert
+        )
+        
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        
+        alert.addAction(UIAlertAction(title: "Delete", style: .destructive) { [weak self] _ in
+            guard let self = self else { return }
+            
+            // Get all tasks for this category
+            let tasksToDelete = CoreDataManager.shared.fetchTasks(category: category)
+            
+            // Delete all related tasks
+            let context = CoreDataManager.shared.viewContext
+            for task in tasksToDelete {
+                context.delete(task)
+            }
+            
+            // Delete the category
+            CoreDataManager.shared.deleteCategory(category)
+            
+            // Add haptic feedback
+            let generator = UINotificationFeedbackGenerator()
+            generator.notificationOccurred(.success)
+            
+            // Call completion handler
+            completion()
+        })
+        
+        present(alert, animated: true)
+    }
+    
+    private func presentEditCategoryAlert(for category: NSManagedObject) {
+        let categoryName = category.value(forKey: "name") as? String ?? ""
+        
+        let alert = UIAlertController(title: "Edit Category", message: "Update the category name", preferredStyle: .alert)
+        
+        alert.addTextField { textField in
+            textField.text = categoryName
+            textField.placeholder = "Category Name"
+            textField.autocapitalizationType = .words
+        }
+        
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        
+        alert.addAction(UIAlertAction(title: "Save", style: .default) { [weak self] _ in
+            guard let self = self,
+                  let textField = alert.textFields?.first,
+                  let newName = textField.text,
+                  !newName.isEmpty else { return }
+            
+            // Update category name
+            CoreDataManager.shared.updateCategory(category, name: newName)
+            
+            // Refresh categories
+            self.fetchCategories()
+            
+            // Add haptic feedback
+            let generator = UINotificationFeedbackGenerator()
+            generator.notificationOccurred(.success)
+        })
+        
+        present(alert, animated: true)
     }
 }
 
@@ -342,7 +491,7 @@ class CategoryCell: UITableViewCell {
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleThemeChanged),
-            name: NSNotification.Name("AppThemeChanged"),
+            name: ThemeManager.themeChangedNotification,
             object: nil
         )
     }
@@ -447,11 +596,29 @@ class CategoryCell: UITableViewCell {
     func configure(with name: String, color: UIColor, taskCount: Int) {
         nameLabel.text = name
         colorIndicator.backgroundColor = color
-        taskCountLabel.text = "\(taskCount) tasks"
+        taskCountLabel.text = "\(taskCount) task\(taskCount == 1 ? "" : "s")"
         
         // Apply styling after layout is complete
         DispatchQueue.main.async {
             self.applyThemeAndStyles() 
         }
+    }
+}
+
+// MARK: - UIColor Extension
+extension UIColor {
+    static func fromHex(_ hex: String) -> UIColor? {
+        var hexSanitized = hex.trimmingCharacters(in: .whitespacesAndNewlines)
+        hexSanitized = hexSanitized.replacingOccurrences(of: "#", with: "")
+        
+        var rgb: UInt64 = 0
+        
+        guard Scanner(string: hexSanitized).scanHexInt64(&rgb) else { return nil }
+        
+        let red = CGFloat((rgb & 0xFF0000) >> 16) / 255.0
+        let green = CGFloat((rgb & 0x00FF00) >> 8) / 255.0
+        let blue = CGFloat(rgb & 0x0000FF) / 255.0
+        
+        return UIColor(red: red, green: green, blue: blue, alpha: 1.0)
     }
 }

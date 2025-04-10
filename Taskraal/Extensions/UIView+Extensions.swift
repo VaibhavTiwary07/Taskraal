@@ -85,49 +85,50 @@ extension UIView {
         let finalShadowRadius = shadowRadius ?? themeEffect.shadowRadius
         let finalBackgroundColor = backgroundColor ?? themeManager.backgroundColor
         
-        // Set background color for the neumorphic effect
+        // Set background color and corner radius directly
         self.backgroundColor = finalBackgroundColor
-        
-        // Set corner radius
         self.layer.cornerRadius = cornerRadius
         
-        // Remove existing shadows
-        self.layer.shadowOpacity = 0
-        layer.sublayers?.filter { $0.name == "neumorphicShadow" }.forEach { $0.removeFromSuperlayer() }
+        // Remove any existing shadow effect
+        layer.shadowOpacity = 0
+        layer.masksToBounds = false
         
-        // Instead of using CALayer with inner shadow, use the main layer's shadow
-        // Create a neumorphic container that will handle the shadows
-        let neumorphicView = NeumorphicView(frame: bounds)
-        neumorphicView.tag = 1001 // Tag to identify it later
-        neumorphicView.translatesAutoresizingMaskIntoConstraints = false
-        neumorphicView.backgroundColor = .clear
+        // Apply optimized shadow
+        layer.shadowColor = finalDarkShadow.cgColor
+        layer.shadowOffset = CGSize(width: shadowOffset/2, height: shadowOffset/2)
+        layer.shadowOpacity = 0.25
+        layer.shadowRadius = finalShadowRadius/2
         
-        // Remove any existing neumorphic view
-        subviews.filter { $0.tag == 1001 }.forEach { $0.removeFromSuperview() }
+        // Create a shadowPath for better performance
+        updateShadowPathIfNeeded()
         
-        // Insert at the bottom
-        insertSubview(neumorphicView, at: 0)
+        // Clean up any existing neumorphic views
+        subviews.filter { $0.tag == 1001 || $0.tag == 1002 }.forEach { $0.removeFromSuperview() }
         
-        // Add constraints to make it resize with parent
-        NSLayoutConstraint.activate([
-            neumorphicView.topAnchor.constraint(equalTo: topAnchor),
-            neumorphicView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            neumorphicView.trailingAnchor.constraint(equalTo: trailingAnchor),
-            neumorphicView.bottomAnchor.constraint(equalTo: bottomAnchor)
-        ])
+        // Tag the view to track it has neumorphic effect applied
+        tag = (tag == 0) ? 2001 : tag
+    }
+    
+    // Helper method to update shadow path when bounds change
+    private func updateShadowPathIfNeeded() {
+        if bounds.size != .zero && layer.shadowOpacity > 0 {
+            let shadowPath = UIBezierPath(roundedRect: bounds, cornerRadius: layer.cornerRadius).cgPath
+            layer.shadowPath = shadowPath
+        }
+    }
+    
+    // Helper to update shadow paths when layout changes
+    @objc private func handleLayoutChanged() {
+        updateShadowPathIfNeeded()
+    }
+    
+    // This method should be called in viewDidLayoutSubviews of the view controller
+    func updateNeumorphicShadowPaths() {
+        // Update this view's shadow path
+        updateShadowPathIfNeeded()
         
-        // Configure the neumorphic view with the shadow parameters
-        neumorphicView.configure(
-            cornerRadius: cornerRadius,
-            lightShadowColor: finalLightShadow,
-            darkShadowColor: finalDarkShadow,
-            shadowOffset: shadowOffset,
-            shadowRadius: finalShadowRadius,
-            backgroundColor: finalBackgroundColor
-        )
-        
-        // Force layout to ensure shadows are properly displayed
-        setNeedsLayout()
+        // Update subviews with tag 2001 (views with neumorphic effect)
+        subviews.filter { $0.tag == 2001 }.forEach { $0.updateShadowPathIfNeeded() }
     }
     
     func addInsetNeumorphicEffect(cornerRadius: CGFloat = 10,
@@ -147,48 +148,29 @@ extension UIView {
         let finalShadowRadius = shadowRadius ?? themeEffect.shadowRadius
         let finalBackgroundColor = backgroundColor ?? themeManager.backgroundColor
         
-        // Set background color
+        // Set background color and corner radius directly
         self.backgroundColor = finalBackgroundColor
-        
-        // Set corner radius
         self.layer.cornerRadius = cornerRadius
         
-        // Remove existing shadows
-        self.layer.shadowOpacity = 0
-        layer.sublayers?.filter { $0.name == "neumorphicShadow" }.forEach { $0.removeFromSuperlayer() }
+        // Clean up any existing effects
+        layer.shadowOpacity = 0
+        layer.borderWidth = 0
         
-        // Create a neumorphic container that will handle the shadows
-        let neumorphicView = InsetNeumorphicView(frame: bounds)
-        neumorphicView.tag = 1002 // Tag to identify it later
-        neumorphicView.translatesAutoresizingMaskIntoConstraints = false
-        neumorphicView.backgroundColor = .clear
+        // Apply subtle border for inset effect
+        layer.borderWidth = 1.0
         
-        // Remove any existing neumorphic view
-        subviews.filter { $0.tag == 1002 }.forEach { $0.removeFromSuperview() }
+        // Create a gradient border color
+        let isDarkMode = themeManager.isDarkModeEnabled
+        if isDarkMode {
+            // For dark mode, use darker borders
+            layer.borderColor = finalDarkShadow.withAlphaComponent(0.3).cgColor
+        } else {
+            // For light mode, use subtle gray border
+            layer.borderColor = UIColor.lightGray.withAlphaComponent(0.2).cgColor
+        }
         
-        // Insert at the bottom
-        insertSubview(neumorphicView, at: 0)
-        
-        // Add constraints to make it resize with parent
-        NSLayoutConstraint.activate([
-            neumorphicView.topAnchor.constraint(equalTo: topAnchor),
-            neumorphicView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            neumorphicView.trailingAnchor.constraint(equalTo: trailingAnchor),
-            neumorphicView.bottomAnchor.constraint(equalTo: bottomAnchor)
-        ])
-        
-        // Configure the neumorphic view with the shadow parameters
-        neumorphicView.configure(
-            cornerRadius: cornerRadius,
-            lightShadowColor: finalLightShadow,
-            darkShadowColor: finalDarkShadow,
-            shadowOffset: shadowOffset,
-            shadowRadius: finalShadowRadius,
-            backgroundColor: finalBackgroundColor
-        )
-        
-        // Force layout to ensure shadows are properly displayed
-        setNeedsLayout()
+        // Clean up any existing neumorphic views
+        subviews.filter { $0.tag == 1001 || $0.tag == 1002 }.forEach { $0.removeFromSuperview() }
     }
     
     // Apply theming to this view and all its subviews
@@ -241,6 +223,11 @@ class NeumorphicView: UIView {
         lightShadow.shadowOpacity = 1
         lightShadow.shadowRadius = shadowRadius
         
+        // Set shadow path for better performance
+        let lightShadowPath = UIBezierPath(roundedRect: bounds, cornerRadius: cornerRadius).cgPath
+        lightShadow.shadowPath = lightShadowPath
+        lightShadow.name = "optimizedShadow"
+        
         // Create dark shadow (bottom-right)
         let darkShadow = CALayer()
         darkShadow.frame = bounds
@@ -250,6 +237,11 @@ class NeumorphicView: UIView {
         darkShadow.shadowOffset = CGSize(width: shadowOffset, height: shadowOffset)
         darkShadow.shadowOpacity = 1
         darkShadow.shadowRadius = shadowRadius
+        
+        // Set shadow path for better performance
+        let darkShadowPath = UIBezierPath(roundedRect: bounds, cornerRadius: cornerRadius).cgPath
+        darkShadow.shadowPath = darkShadowPath
+        darkShadow.name = "optimizedShadow"
         
         // Add shadow layers
         layer.addSublayer(lightShadow)
@@ -290,29 +282,62 @@ class InsetNeumorphicView: UIView {
         // Clear any existing layers
         layer.sublayers?.removeAll()
         
-        // Create inner shadow layers
-        let innerShadowLayer = CALayer()
-        innerShadowLayer.frame = bounds
-        innerShadowLayer.cornerRadius = cornerRadius
-        innerShadowLayer.backgroundColor = bgColor.cgColor
-        innerShadowLayer.shadowColor = darkShadowColor.cgColor
-        innerShadowLayer.shadowOffset = CGSize(width: -shadowOffset, height: -shadowOffset)
-        innerShadowLayer.shadowOpacity = 1
-        innerShadowLayer.shadowRadius = shadowRadius
-        innerShadowLayer.masksToBounds = true
+        // Instead of using multiple complex shadow layers, use a single CALayer with proper styling
+        let containerLayer = CALayer()
+        containerLayer.frame = bounds
+        containerLayer.cornerRadius = cornerRadius
+        containerLayer.backgroundColor = bgColor.cgColor
+        containerLayer.masksToBounds = false
+        containerLayer.name = "optimizedContainer"
         
-        let innerShadowLayer2 = CALayer()
-        innerShadowLayer2.frame = bounds
-        innerShadowLayer2.cornerRadius = cornerRadius
-        innerShadowLayer2.backgroundColor = bgColor.cgColor
-        innerShadowLayer2.shadowColor = lightShadowColor.cgColor
-        innerShadowLayer2.shadowOffset = CGSize(width: shadowOffset, height: shadowOffset)
-        innerShadowLayer2.shadowOpacity = 1
-        innerShadowLayer2.shadowRadius = shadowRadius
-        innerShadowLayer2.masksToBounds = true
+        // Add inner shadow effect using border and gradient
+        let borderWidth: CGFloat = 1.0
+        containerLayer.borderWidth = borderWidth
         
-        // Add inner shadow layers
-        layer.addSublayer(innerShadowLayer)
-        layer.addSublayer(innerShadowLayer2)
+        // Create a gradient layer for the inner shadow effect
+        let gradientLayer = CAGradientLayer()
+        gradientLayer.frame = bounds.insetBy(dx: borderWidth, dy: borderWidth)
+        gradientLayer.cornerRadius = cornerRadius - borderWidth
+        gradientLayer.colors = [
+            darkShadowColor.withAlphaComponent(0.4).cgColor,
+            bgColor.cgColor,
+            lightShadowColor.withAlphaComponent(0.4).cgColor
+        ]
+        gradientLayer.locations = [0.0, 0.5, 1.0]
+        gradientLayer.startPoint = CGPoint(x: 0, y: 0)
+        gradientLayer.endPoint = CGPoint(x: 1, y: 1)
+        gradientLayer.name = "optimizedGradient"
+        
+        // Add gradient layer inside the container
+        containerLayer.addSublayer(gradientLayer)
+        
+        // Add the container to the view's layer
+        layer.addSublayer(containerLayer)
+        
+        // Add a subtle border gradient for the inner shadow effect
+        let borderGradient = CAGradientLayer()
+        borderGradient.frame = bounds
+        borderGradient.cornerRadius = cornerRadius
+        borderGradient.colors = [
+            darkShadowColor.withAlphaComponent(0.6).cgColor,
+            lightShadowColor.withAlphaComponent(0.6).cgColor
+        ]
+        borderGradient.startPoint = CGPoint(x: 0, y: 0)
+        borderGradient.endPoint = CGPoint(x: 1, y: 1)
+        borderGradient.opacity = 0.5
+        borderGradient.name = "borderGradient"
+        
+        // Create a mask to show only the border
+        let maskLayer = CAShapeLayer()
+        let maskPath = UIBezierPath(roundedRect: bounds, cornerRadius: cornerRadius)
+        let innerPath = UIBezierPath(roundedRect: bounds.insetBy(dx: borderWidth, dy: borderWidth), cornerRadius: cornerRadius - borderWidth)
+        maskPath.append(innerPath.reversing())
+        maskLayer.path = maskPath.cgPath
+        maskLayer.fillRule = .evenOdd
+        
+        borderGradient.mask = maskLayer
+        
+        // Add the border gradient on top
+        layer.addSublayer(borderGradient)
     }
 }
