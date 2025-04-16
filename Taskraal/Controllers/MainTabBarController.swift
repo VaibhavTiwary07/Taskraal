@@ -34,13 +34,11 @@ class MainTabBarController: UITabBarController {
     func setupTabs() {
         let tasksVC = TasksViewController()
         let categoriesVC = CategoriesViewController()
-        let aiTaskVC = AIPrioritizationViewController()
         let settingsVC = SettingsViewController()
         
         // Configure each view controller
         configureController(tasksVC, title: "Tasks")
         configureController(categoriesVC, title: "Categories")
-        configureController(aiTaskVC, title: "AI Assistant")
         configureController(settingsVC, title: "Settings")
         
         // Create navigation controllers
@@ -48,12 +46,10 @@ class MainTabBarController: UITabBarController {
                                                     image: "checklist", selectedImage: "checklist.fill")
         let categoriesNavController = createNavController(for: categoriesVC, title: "Categories",
                                                          image: "folder", selectedImage: "folder.fill")
-        let aiTaskNavController = createNavController(for: aiTaskVC, title: "AI Assistant",
-                                                     image: "wand.and.stars", selectedImage: "wand.and.stars.fill")
         let settingsNavController = createNavController(for: settingsVC, title: "Settings",
                                                        image: "gear", selectedImage: "gear.fill")
         
-        setViewControllers([tasksNavController, categoriesNavController, aiTaskNavController, settingsNavController], animated: true)
+        setViewControllers([tasksNavController, categoriesNavController, settingsNavController], animated: true)
     }
     
     private func configureController(_ viewController: UIViewController, title: String) {

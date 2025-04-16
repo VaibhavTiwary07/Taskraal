@@ -8,9 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		DB34CE772DA438F7007DE17F /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB34CE762DA438F6007DE17F /* ThemeManager.swift */; };
-		DB34CE9B2DA70371007DE17F /* SchedulingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB34CE9A2DA70371007DE17F /* SchedulingService.swift */; };
+		DB34CE9B2DA70371007DE17F /* SchedulingServices.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB34CE9A2DA70371007DE17F /* SchedulingServices.swift */; };
 		DB6FA5682D9E862800633F8F /* TaskCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB6FA5672D9E862800633F8F /* TaskCell.swift */; };
-        19018378-60b4-4813-83b4-787963e7beab /* AIPrioritizationViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326e6eda-0ff7-4d62-85ab-c76eb2ba4f68 /* AIPrioritizationViewController.swift */; };		DB6FA56A2D9E870200633F8F /* AddTaskViewcontoller.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB6FA5692D9E870200633F8F /* AddTaskViewcontoller.swift */; };
+		DB6FA56A2D9E870200633F8F /* AddTaskViewcontoller.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB6FA5692D9E870200633F8F /* AddTaskViewcontoller.swift */; };
 		DB6FA56C2D9E886000633F8F /* CategoryDetailViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB6FA56B2D9E886000633F8F /* CategoryDetailViewController.swift */; };
 		DB6FA56E2D9E8E8300633F8F /* DatePickerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB6FA56D2D9E8E8300633F8F /* DatePickerViewController.swift */; };
 		DB6FA5712D9FA1FC00633F8F /* Taskraal.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = DB6FA56F2D9FA1FC00633F8F /* Taskraal.xcdatamodeld */; };
@@ -29,7 +29,7 @@
 		DBB1FF6B2D776EC700FBA4A7 /* OnboardingCollectionViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBB1FF6A2D776EC700FBA4A7 /* OnboardingCollectionViewCell.swift */; };
 		DBB1FFB82D7F52BE00FBA4A7 /* PriorityLevel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBB1FFB72D7F52BE00FBA4A7 /* PriorityLevel.swift */; };
 		DBBF60642D817E1E00465BFF /* MainTabBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBBF60632D817E1E00465BFF /* MainTabBarController.swift */; };
-		DBBF60662D81857900465BFF /* TaskViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBBF60652D81857900465BFF /* TaskViewController.swift */; };
+		DBBF60662D81857900465BFF /* TasksViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBBF60652D81857900465BFF /* TasksViewController.swift */; };
 		DBBF60682D81859D00465BFF /* CategoriesViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBBF60672D81859D00465BFF /* CategoriesViewController.swift */; };
 		DBBF606A2D8185AF00465BFF /* SettingsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBBF60692D8185AF00465BFF /* SettingsViewController.swift */; };
 /* End PBXBuildFile section */
@@ -53,9 +53,9 @@
 
 /* Begin PBXFileReference section */
 		DB34CE762DA438F6007DE17F /* ThemeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeManager.swift; sourceTree = "<group>"; };
-		DB34CE9A2DA70371007DE17F /* SchedulingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchedulingService.swift; sourceTree = "<group>"; };
+		DB34CE9A2DA70371007DE17F /* SchedulingServices.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchedulingServices.swift; sourceTree = "<group>"; };
 		DB6FA5672D9E862800633F8F /* TaskCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskCell.swift; sourceTree = "<group>"; };
-        326e6eda-0ff7-4d62-85ab-c76eb2ba4f68 /* AIPrioritizationViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIPrioritizationViewController.swift; sourceTree = "<group>"; };		DB6FA5692D9E870200633F8F /* AddTaskViewcontoller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddTaskViewcontoller.swift; sourceTree = "<group>"; };
+		DB6FA5692D9E870200633F8F /* AddTaskViewcontoller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddTaskViewcontoller.swift; sourceTree = "<group>"; };
 		DB6FA56B2D9E886000633F8F /* CategoryDetailViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryDetailViewController.swift; sourceTree = "<group>"; };
 		DB6FA56D2D9E8E8300633F8F /* DatePickerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatePickerViewController.swift; sourceTree = "<group>"; };
 		DB6FA5702D9FA1FC00633F8F /* Taskraal.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = Taskraal.xcdatamodel; sourceTree = "<group>"; };
@@ -78,7 +78,7 @@
 		DBB1FF6A2D776EC700FBA4A7 /* OnboardingCollectionViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingCollectionViewCell.swift; sourceTree = "<group>"; };
 		DBB1FFB72D7F52BE00FBA4A7 /* PriorityLevel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PriorityLevel.swift; sourceTree = "<group>"; };
 		DBBF60632D817E1E00465BFF /* MainTabBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabBarController.swift; sourceTree = "<group>"; };
-		DBBF60652D81857900465BFF /* TaskViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskViewController.swift; sourceTree = "<group>"; };
+		DBBF60652D81857900465BFF /* TasksViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksViewController.swift; sourceTree = "<group>"; };
 		DBBF60672D81859D00465BFF /* CategoriesViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoriesViewController.swift; sourceTree = "<group>"; };
 		DBBF60692D8185AF00465BFF /* SettingsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -210,7 +210,7 @@
 			isa = PBXGroup;
 			children = (
 				DB6FA57A2D9FA74400633F8F /* CoreDataManger.swift */,
-				DB34CE9A2DA70371007DE17F /* SchedulingService.swift */,
+				DB34CE9A2DA70371007DE17F /* SchedulingServices.swift */,
 				DB34CE762DA438F6007DE17F /* ThemeManager.swift */,
 			);
 			path = Services;
@@ -232,8 +232,8 @@
 				DBBF60672D81859D00465BFF /* CategoriesViewController.swift */,
 				DB6FA56B2D9E886000633F8F /* CategoryDetailViewController.swift */,
 				DBBF60692D8185AF00465BFF /* SettingsViewController.swift */,
-				DBBF60652D81857900465BFF /* TaskViewController.swift */,
-                326e6eda-0ff7-4d62-85ab-c76eb2ba4f68 /* AIPrioritizationViewController.swift */,				DB6FA56D2D9E8E8300633F8F /* DatePickerViewController.swift */,
+				DBBF60652D81857900465BFF /* TasksViewController.swift */,
+				DB6FA56D2D9E8E8300633F8F /* DatePickerViewController.swift */,
 				DB6FA5692D9E870200633F8F /* AddTaskViewcontoller.swift */,
 			);
 			path = Controllers;
@@ -374,8 +374,8 @@
 				DBB1FFB82D7F52BE00FBA4A7 /* PriorityLevel.swift in Sources */,
 				DB6FA56C2D9E886000633F8F /* CategoryDetailViewController.swift in Sources */,
 				DBBF60682D81859D00465BFF /* CategoriesViewController.swift in Sources */,
-				DBBF60662D81857900465BFF /* TaskViewController.swift in Sources */,
-				DB34CE9B2DA70371007DE17F /* SchedulingService.swift in Sources */,
+				DBBF60662D81857900465BFF /* TasksViewController.swift in Sources */,
+				DB34CE9B2DA70371007DE17F /* SchedulingServices.swift in Sources */,
 				DB34CE772DA438F7007DE17F /* ThemeManager.swift in Sources */,
 				DBBF60642D817E1E00465BFF /* MainTabBarController.swift in Sources */,
 				DB6FA56A2D9E870200633F8F /* AddTaskViewcontoller.swift in Sources */,

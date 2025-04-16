@@ -1,0 +1,109 @@
+name: iOS CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  build-and-test:
+    name: Build and Test
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+    
+    - name: Set up Xcode
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: latest-stable
+    
+    - name: Install Dependencies
+      run: |
+        echo "No dependencies to install for this project"
+    
+    - name: Print Xcode Version
+      run: xcodebuild -version
+    
+    - name: List Available Destinations
+      run: xcodebuild -project Taskraal.xcodeproj -scheme Taskraal -showdestinations
+    
+    - name: Build for Testing
+      run: xcodebuild build-for-testing -project Taskraal.xcodeproj -scheme Taskraal -destination "platform=iOS Simulator,name=iPhone 14"
+    
+    - name: Run Tests
+      run: xcodebuild test-without-building -project Taskraal.xcodeproj -scheme Taskraal -destination "platform=iOS Simulator,name=iPhone 14"
+    
+    - name: Build for Archive
+      run: xcodebuild clean build -project Taskraal.xcodeproj -scheme Taskraal -destination "generic/platform=iOS" CODE_SIGNING_ALLOWED=NO
+    
+    - name: Upload Build Artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: build-artifacts
+        path: |
+          build/
+          !build/*.ipa
+        retention-days: 7
+
+  lint:
+    name: Code Lint
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+    
+    - name: Set up SwiftLint
+      run: brew install swiftlint
+    
+    - name: Run SwiftLint
+      run: swiftlint lint --reporter github-actions-logging
+
+  deploy-testflight:
+    name: Deploy to TestFlight
+    runs-on: macos-latest
+    needs: [build-and-test, lint]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+      
+    - name: Set up Xcode
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: latest-stable
+        
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.0'
+        bundler-cache: true
+        
+    - name: Install Fastlane
+      run: gem install fastlane
+      
+    - name: Setup Provisioning Profiles
+      env:
+        APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+        APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        APPLE_KEYCHAIN_PASSWORD: ${{ secrets.APPLE_KEYCHAIN_PASSWORD }}
+        PROVISIONING_PROFILE_BASE64: ${{ secrets.PROVISIONING_PROFILE_BASE64 }}
+      run: |
+        echo "Note: This step would normally decode and install certificates and provisioning profiles"
+        echo "For an actual setup, certificates and profiles would need to be provided as repository secrets"
+      
+    - name: Build and Upload to TestFlight
+      env:
+        FASTLANE_USER: ${{ secrets.FASTLANE_USER }}
+        FASTLANE_PASSWORD: ${{ secrets.FASTLANE_PASSWORD }}
+        FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
+        FASTLANE_SKIP_UPDATE_CHECK: true
+      run: |
+        echo "Note: In a real setup, this would run fastlane to build and upload the app"
+        echo "For example: fastlane beta"
+        echo "Since this is a demo workflow, we're just showing the steps that would be taken" 
