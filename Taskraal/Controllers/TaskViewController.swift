@@ -366,13 +366,13 @@ class TasksViewController: UIViewController {
     
     private func setupNavigationBar() {
         // Add AI Assistant button to navigation bar
-        let aiButton = UIBarButtonItem(
-            image: UIImage(systemName: "wand.and.stars"),
-            style: .plain,
-            target: self,
-            action: #selector(showAIAssistant)
-        )
-        navigationItem.rightBarButtonItem = aiButton
+//        let aiButton = UIBarButtonItem(
+//            image: UIImage(systemName: "wand.and.stars"),
+//            style: .plain,
+//            target: self,
+//            action: #selector(showAIAssistant)
+//        )
+//        navigationItem.rightBarButtonItem = aiButton
     }
     
     private func applyThemeAndStyles() {
@@ -552,12 +552,12 @@ class TasksViewController: UIViewController {
         updateEmptyStateVisibility()
     }
     
-    @objc private func showAIAssistant() {
-        let aiVC = AIPrioritizationViewController()
-        let navController = UINavigationController(rootViewController: aiVC)
-        navController.modalPresentationStyle = .formSheet
-        present(navController, animated: true)
-    }
+//    @objc private func showAIAssistant() {
+//        let aiVC = AIPrioritizationViewController()
+//        let navController = UINavigationController(rootViewController: aiVC)
+//        navController.modalPresentationStyle = .formSheet
+//        present(navController, animated: true)
+//    }
     
     // MARK: - Core Data
     private func fetchTasks() {

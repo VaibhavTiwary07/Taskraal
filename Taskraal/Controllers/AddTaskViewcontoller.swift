@@ -198,9 +198,7 @@ class AddTaskViewController: UIViewController {
             self.contentView.subviews.forEach { $0.layoutIfNeeded() }
             
             // Print debug info
-            print("🚀 Initial layout forced for all views")
-            print("⚙️ ContentView frame: \(self.contentView.frame)")
-            print("⚙️ ScrollView contentSize: \(self.scrollView.contentSize)")
+           
         }
         
         // Pre-fetch categories for smoother category selection
@@ -261,14 +259,7 @@ class AddTaskViewController: UIViewController {
         view.updateNeumorphicShadowPaths()
         
         // Debug frame information
-        print("\n--- VIEW FRAMES DEBUG ---")
-        print("🔄 DateButton: frame=\(dateButton.frame), bounds=\(dateButton.bounds), superview=\(dateButton.superview?.description ?? "none")")
-        print("🔄 CategoryButton: frame=\(categoryButton.frame), bounds=\(categoryButton.bounds), superview=\(categoryButton.superview?.description ?? "none")")
-        print("🔄 PrioritySegment: frame=\(prioritySegmentedControl.frame), bounds=\(prioritySegmentedControl.bounds)")
-        print("🔄 SaveButton: frame=\(saveButton.frame), bounds=\(saveButton.bounds)")
-        print("🔄 ContentView: frame=\(contentView.frame), bounds=\(contentView.bounds)")
-        print("🔄 ScrollView: frame=\(scrollView.frame), bounds=\(scrollView.bounds), contentSize=\(scrollView.contentSize)")
-        print("------------------------\n")
+//
     }
     
     override func viewDidAppear(_ animated: Bool) {
@@ -386,7 +377,7 @@ class AddTaskViewController: UIViewController {
         scrollView.delaysContentTouches = false
         scrollView.keyboardDismissMode = .interactive
         
-        print("📜 ScrollView setup completed with explicit contentView constraints")
+       
     }
     
     private func setupTitleField() {
@@ -485,7 +476,7 @@ class AddTaskViewController: UIViewController {
         prioritySegmentedControl.addTarget(self, action: #selector(priorityChanged), for: .valueChanged)
         
         // Debug info
-        print("🔄 Priority control configured: items=\(PriorityLevel.allCases.map { $0.title }), selectedIndex=\(prioritySegmentedControl.selectedSegmentIndex)")
+       
     }
     
     private func setupCategorySection() {
@@ -541,7 +532,7 @@ class AddTaskViewController: UIViewController {
         
         // Add target action with debug info
         categoryButton.addTarget(self, action: #selector(categoryButtonTapped), for: .touchUpInside)
-        print("📋 Category button configured: size=\(categoryButton.frame.size), tag=\(categoryButton.tag)")
+        
         
         // Add a unique tag for easier debugging
         categoryButton.tag = 1234
@@ -605,18 +596,18 @@ class AddTaskViewController: UIViewController {
         dateButton.tag = 5678
         
         // Debug info
-        print("📆 Date button configured: size=\(dateButton.frame.size), tag=\(dateButton.tag)")
+        
     }
     
     @objc private func datebutton2(){
-        print("tapped datebutton2 - should NOT be called anymore")
+     
         // Forward to the real method to avoid breaking functionality
         dateButtonTapped()
     }
     
     @objc private func dateButtonTapped() {
         // First dismiss keyboard if showing
-        print("DEBUG: Date button tapped - presenting date picker")
+       
         view.endEditing(true)
         
         // Add tap feedback animation
@@ -1136,7 +1127,7 @@ class AddTaskViewController: UIViewController {
         let feedback = UIImpactFeedbackGenerator(style: .light)
         feedback.impactOccurred()
         
-        print("DEBUG: Category button tapped - presenting category selection")
+        print("ategory button tapped - presenting category selection")
         
         // Use cached categories or load them now
         var categories = self.cachedCategories
@@ -1616,28 +1607,21 @@ class AddTaskViewController: UIViewController {
         // Always enable scrolling
         scrollView.isScrollEnabled = true
         
-        print("DEBUG: ScrollView content size updated to height: \(newHeight)")
+        
     }
     
     // Helper function to improve logging for debugging
     private func logViewHierarchy() {
-        print("DEBUG: Scrollview frame: \(scrollView.frame), contentSize: \(scrollView.contentSize)")
-        print("DEBUG: ContentView frame: \(contentView.frame)")
+        
         
         // Log all contentView subviews
-        for (index, subview) in contentView.subviews.enumerated() {
-            print("DEBUG: Subview \(index): \(type(of: subview)), frame: \(subview.frame)")
-        }
+        
     }
     
     // Function to enable/disable scrolling (useful for debugging)
     private func setScrollingEnabled(_ enabled: Bool) {
         scrollView.isScrollEnabled = enabled
-        if enabled {
-            print("DEBUG: Scrolling enabled")
-        } else {
-            print("DEBUG: Scrolling disabled")
-        }
+        
     }
     
     override func viewWillLayoutSubviews() {
@@ -1662,7 +1646,7 @@ class AddTaskViewController: UIViewController {
         // Force content view to have proper size
         if contentView.frame.height < 800 {
             contentView.frame.size = CGSize(width: scrollView.bounds.width, height: 1200)
-            print("⚠️ Fixed inadequate contentView height: \(contentView.frame.height)")
+           
         }
         
         // Force layout of category button 
@@ -1672,7 +1656,7 @@ class AddTaskViewController: UIViewController {
             categoryButton.frame = CGRect(x: 20, y: categoryButton.frame.origin.y, width: buttonWidth, height: 50)
             categoryButton.setNeedsLayout()
             categoryButton.layoutIfNeeded()
-            print("⚠️ Fixed empty categoryButton frame: now \(categoryButton.frame)")
+            
         }
         
         // Force layout of date button
@@ -1682,7 +1666,7 @@ class AddTaskViewController: UIViewController {
             dateButton.frame = CGRect(x: 20, y: dateButton.frame.origin.y, width: buttonWidth, height: 50)
             dateButton.setNeedsLayout()
             dateButton.layoutIfNeeded()
-            print("⚠️ Fixed empty dateButton frame: now \(dateButton.frame)")
+            
         }
         
         // Ensure proper priority segment setup
@@ -1690,7 +1674,7 @@ class AddTaskViewController: UIViewController {
             prioritySegmentedControl.frame.size = CGSize(width: contentView.bounds.width - 40, height: 44)
             prioritySegmentedControl.setNeedsLayout()
             prioritySegmentedControl.layoutIfNeeded()
-            print("⚠️ Fixed prioritySegmentedControl frame: now \(prioritySegmentedControl.frame)")
+            
         }
         
         // Fix save button if needed
@@ -1699,7 +1683,7 @@ class AddTaskViewController: UIViewController {
             saveButton.frame = CGRect(x: 20, y: yPos, width: contentView.bounds.width - 40, height: 60)
             saveButton.setNeedsLayout()
             saveButton.layoutIfNeeded()
-            print("⚠️ Fixed saveButton frame: now \(saveButton.frame)")
+            
         }
         
         // Force contentView to be tall enough
@@ -1707,18 +1691,18 @@ class AddTaskViewController: UIViewController {
         if contentView.bounds.height < lowestView + 40 {
             contentView.frame.size.height = lowestView + 40
             scrollView.contentSize.height = contentView.frame.size.height
-            print("⚠️ Adjusted contentView height to fit all content: \(contentView.frame.height)")
+            
         }
         
         // Check buttons are interactive
         if !categoryButton.isUserInteractionEnabled {
             categoryButton.isUserInteractionEnabled = true
-            print("⚠️ Fixed categoryButton.isUserInteractionEnabled")
+            
         }
         
         if !dateButton.isUserInteractionEnabled {
             dateButton.isUserInteractionEnabled = true
-            print("⚠️ Fixed dateButton.isUserInteractionEnabled")
+            
         }
     }
 

@@ -21,7 +21,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         testCoreData()
         
         // Initialize SchedulingService and set up notifications
-        let schedulingService = SchedulingService.shared
+        _ = SchedulingService.shared
         
         // Set up notification categories for task actions
         setupNotificationCategories()
@@ -59,13 +59,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         }
         
         // Create a test task using CoreDataManager
-        guard let task = CoreDataManager.shared.createTask(
+        guard CoreDataManager.shared.createTask(
             title: "Test Task",
             details: "This is a test task",
             dueDate: Date().addingTimeInterval(86400), // Set due date to tomorrow
             priority: .medium,
             category: category
-        ) else {
+        ) != nil else {
             print("Failed to create test task")
             return
         }

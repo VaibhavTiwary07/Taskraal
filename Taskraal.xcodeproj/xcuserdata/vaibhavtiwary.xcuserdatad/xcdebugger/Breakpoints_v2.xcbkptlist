@@ -14,10 +14,10 @@
             filePath = "Taskraal/Controllers/AddTaskViewcontoller.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "967"
-            endingLineNumber = "967"
-            landmarkName = "fetchCategories()"
-            landmarkType = "7">
+            startingLineNumber = "958"
+            endingLineNumber = "958"
+            landmarkName = "AddTaskViewController"
+            landmarkType = "3">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -30,8 +30,8 @@
             filePath = "Taskraal/Controllers/AddTaskViewcontoller.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "543"
-            endingLineNumber = "543"
+            startingLineNumber = "534"
+            endingLineNumber = "534"
             landmarkName = "setupCategorySection()"
             landmarkType = "7">
          </BreakpointContent>
@@ -46,9 +46,9 @@
             filePath = "Taskraal/Controllers/AddTaskViewcontoller.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "550"
-            endingLineNumber = "550"
-            landmarkName = "setupDateSection()"
+            startingLineNumber = "541"
+            endingLineNumber = "541"
+            landmarkName = "setupCategorySection()"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -62,8 +62,8 @@
             filePath = "Taskraal/Controllers/AddTaskViewcontoller.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "544"
-            endingLineNumber = "544"
+            startingLineNumber = "535"
+            endingLineNumber = "535"
             landmarkName = "setupCategorySection()"
             landmarkType = "7">
          </BreakpointContent>
@@ -78,8 +78,8 @@
             filePath = "Taskraal/Controllers/AddTaskViewcontoller.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "545"
-            endingLineNumber = "545"
+            startingLineNumber = "536"
+            endingLineNumber = "536"
             landmarkName = "setupCategorySection()"
             landmarkType = "7">
          </BreakpointContent>
@@ -94,8 +94,8 @@
             filePath = "Taskraal/Controllers/AddTaskViewcontoller.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "546"
-            endingLineNumber = "546"
+            startingLineNumber = "537"
+            endingLineNumber = "537"
             landmarkName = "setupCategorySection()"
             landmarkType = "7">
          </BreakpointContent>
@@ -110,8 +110,8 @@
             filePath = "Taskraal/Controllers/AddTaskViewcontoller.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "547"
-            endingLineNumber = "547"
+            startingLineNumber = "538"
+            endingLineNumber = "538"
             landmarkName = "setupCategorySection()"
             landmarkType = "7">
          </BreakpointContent>
